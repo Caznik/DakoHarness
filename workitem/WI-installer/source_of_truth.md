@@ -8,7 +8,7 @@ status: active
 
 ## Current State
 
-**Active sub-feature:** 20260521-claude-code-install-script
+**Active sub-feature:** 20260521-native-mongodb-support
 **Current phase:** repo
 **Blocked:** no
 
@@ -16,7 +16,8 @@ status: active
 
 | Sub-feature | Status | Phases completed | Notes |
 |---|---|---|---|
-| 20260521-claude-code-install-script | in-progress | intake, analyze, propose, plan, implementation, review, documentation | — |
+| 20260521-claude-code-install-script | completed | all | — |
+| 20260521-native-mongodb-support | in-progress | — | — |
 
 ## Active Blockers
 

@@ -19,7 +19,8 @@ There are two ways to install DakoHarness:
 | Requirement | Version | Notes |
 |---|---|---|
 | Node.js | 18+ | Required for long-term MCP and logger |
-| Docker | Any recent | Required for MongoDB |
+| MongoDB | 6+ | Native install **or** via Docker — see Step 2 |
+| Docker | Any recent | Optional — only needed if MongoDB is not already running |
 | Claude Code | Latest | Must support `--plugin-dir` |
 
 ### Step 1 — Get DakoHarness
@@ -41,14 +42,17 @@ From the DakoHarness repo root, run the setup script for your platform. Pass the
 
 **Windows:**
 ```powershell
-.\setup.ps1 -TargetProject "C:\path\to\your\project"
+.\setup.ps1 -ProjectPath "C:\path\to\your\project"
 ```
 
 The script:
-1. Checks Docker is running (exits with a clear error if not)
-2. Starts a `mcp_mongodb` container — or skips if one is already running
-3. Creates `mcps/mongodb-memory/.env` with MongoDB credentials
-4. Appends the DakoHarness memory protocol block to `<your-project>/CLAUDE.md`
+1. Checks if MongoDB is already running on port 27017 — if so, Docker is skipped entirely
+2. If MongoDB is not running: starts a `mcp_mongodb` Docker container (Docker must be installed)
+3. If MongoDB is not running and Docker is not available: exits with a clear error
+4. Prompts for MongoDB credentials — shows existing `.env` values as defaults (or `dako`/`harness` on first run); press Enter to accept
+5. Writes `mcps/mongodb-memory/.env` with the provided credentials
+6. Tests the MongoDB connection and warns if it fails (does not abort)
+7. Appends the DakoHarness memory protocol block to `<your-project>/CLAUDE.md`
 
 ### Step 3 — Open your project with the plugin
 
@@ -91,7 +95,8 @@ Use this only if you are developing or extending DakoHarness itself. All paths a
 | Requirement | Version | Notes |
 |---|---|---|
 | Node.js | 18+ | Required for long-term MCP and logger |
-| Docker | Any recent | Required for MongoDB |
+| MongoDB | 6+ | Native install or via Docker |
+| Docker | Any recent | Optional — only needed if MongoDB is not already running |
 | Claude Code | Latest | Target agent |
 | Go | 1.21+ | Only needed to rebuild the short-term binary |
 

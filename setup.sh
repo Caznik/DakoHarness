@@ -5,53 +5,85 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_PATH="${1:-$PWD}"
+ENV_PATH="$SCRIPT_DIR/mcps/mongodb-memory/.env"
 
 echo ""
 echo "DakoHarness Setup"
 echo "================="
 
-# 1. Check Docker
+# 1. MongoDB — detect native or Docker
 echo ""
-echo "[1/4] Checking Docker..."
-if ! docker info > /dev/null 2>&1; then
-  echo "ERROR: Docker is not running. Start Docker and re-run this script." >&2
-  exit 1
-fi
-echo "      Docker is running."
-
-# 2. Start MongoDB
-echo ""
-echo "[2/4] Starting MongoDB..."
-if docker ps --filter "name=mcp_mongodb" --format "{{.Names}}" | grep -q "mcp_mongodb"; then
-  echo "      MongoDB container already running — skipping."
+echo "[1/4] MongoDB..."
+if (echo >/dev/tcp/localhost/27017) 2>/dev/null; then
+  echo "      Detected on port 27017 — skipping Docker."
 else
-  docker run -d \
-    --name mcp_mongodb \
-    -e MONGO_INITDB_ROOT_USERNAME=dako \
-    -e MONGO_INITDB_ROOT_PASSWORD=harness \
-    -p 27017:27017 \
-    mongo:7 > /dev/null
-  echo "      MongoDB started."
+  if ! docker info > /dev/null 2>&1; then
+    echo "ERROR: MongoDB is not running on port 27017. Install Docker or start MongoDB first." >&2
+    exit 1
+  fi
+  if docker ps --filter "name=mcp_mongodb" --format "{{.Names}}" | grep -q "mcp_mongodb"; then
+    echo "      Docker container already running."
+  else
+    docker run -d \
+      --name mcp_mongodb \
+      -e MONGO_INITDB_ROOT_USERNAME=dako \
+      -e MONGO_INITDB_ROOT_PASSWORD=harness \
+      -p 27017:27017 \
+      mongo:7 > /dev/null
+    echo "      Container started."
+  fi
 fi
 
-# 3. Create .env
+# 2. Credentials — prompt with defaults from existing .env or hardcoded fallback
 echo ""
-echo "[3/4] Creating .env..."
-ENV_PATH="$SCRIPT_DIR/mcps/mongodb-memory/.env"
+echo "[2/4] Credentials..."
+DEFAULT_USER="dako"
+DEFAULT_PASS="harness"
 if [ -f "$ENV_PATH" ]; then
-  echo "      .env already exists — skipping."
-else
-  cat > "$ENV_PATH" <<EOF
-MONGO_USER=dako
-MONGO_PASSWORD=harness
+  line=$(grep "^MONGO_USER=" "$ENV_PATH" 2>/dev/null || true)
+  [ -n "$line" ] && DEFAULT_USER="${line#MONGO_USER=}"
+  line=$(grep "^MONGO_PASSWORD=" "$ENV_PATH" 2>/dev/null || true)
+  [ -n "$line" ] && DEFAULT_PASS="${line#MONGO_PASSWORD=}"
+fi
+
+read -p "      MongoDB user [$DEFAULT_USER]: " INPUT_USER
+MONGO_USER="${INPUT_USER:-$DEFAULT_USER}"
+
+read -sp "      MongoDB password [$DEFAULT_PASS]: " INPUT_PASS
+echo
+MONGO_PASS="${INPUT_PASS:-$DEFAULT_PASS}"
+
+MONGO_URI="mongodb://${MONGO_USER}:${MONGO_PASS}@localhost:27017/agent_memory?authSource=admin"
+
+cat > "$ENV_PATH" <<EOF
+MONGO_USER=$MONGO_USER
+MONGO_PASSWORD=$MONGO_PASS
 MONGO_HOST=localhost
 MONGO_PORT=27017
 MONGO_DB=agent_memory
-MONGO_URI=mongodb://dako:harness@localhost:27017/agent_memory?authSource=admin
+MONGO_URI=$MONGO_URI
 
 DAKO_AGENT=claude-code
 EOF
-  echo "      .env created at $ENV_PATH"
+echo "      .env written to $ENV_PATH"
+
+# 3. Test connection
+echo ""
+echo "[3/4] Testing connection..."
+NM_PATH="$SCRIPT_DIR/mcps/mongodb-memory/node_modules"
+if [ ! -d "$NM_PATH/mongodb" ]; then
+  echo "      Skipping — run 'npm install --prefix mcps/mongodb-memory' first."
+else
+  if node -e "
+const {MongoClient}=require('$NM_PATH/mongodb');
+MongoClient.connect('$MONGO_URI',{serverSelectionTimeoutMS:3000})
+  .then(c=>{c.close();process.exit(0)})
+  .catch(()=>process.exit(1));
+" 2>/dev/null; then
+    echo "      Connected successfully."
+  else
+    echo "WARNING: Could not connect with provided credentials. Check your .env." >&2
+  fi
 fi
 
 # 4. Write CLAUDE.md block
