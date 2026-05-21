@@ -1,0 +1,6 @@
+node_modules/
+.env
+.claude/.dako_session
+.claude/skill-registry.md
+.dako/
+mcps/short-term-memory/short-term-memory.exe

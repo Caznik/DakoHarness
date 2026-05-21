@@ -10,7 +10,8 @@ mcps/
   short-term-memory/ Short-term pattern memory MCP (Go, SQLite, 7-day TTL)
 .claude/
   settings.json     Hook configuration (UserPromptSubmit + Stop + PreCompact)
-  commands/         Custom slash commands (/recall, /promote, /promote-team, /session-end)
+  commands/         Custom slash commands (/recall, /promote, /promote-team, /session-end, /wi-*)
+workitem/           Workitem traceability artifacts (source_of_truth.md + phase artifacts per WI)
 .mcp.json           MCP server registrations
 ```
 
@@ -82,6 +83,37 @@ If a task feels similar to something done recently, call `find_patterns` with re
 ## Skill Registry
 
 A list of available slash commands is in `.claude/skill-registry.md`. Consult it when a user's request sounds like a workflow task that might match a command (e.g. "search memory", "end the session", "save this pattern"). Run `/registry-refresh` after adding or removing a command file.
+
+---
+
+## Workitem Workflow
+
+Every development task can optionally go through the structured workitem workflow for full traceability. Artifacts are stored in `workitem/WI-<feature>/<date>-<sub-feature>/`.
+
+### When to use the workflow
+
+- **Full workflow** (`/wi-start`) — new feature, refactor, or significant bugfix that affects behaviour
+- **Partial workflow** — user says "just plan this" or "just review this" → start at that phase
+- **Free flow** — general questions, trivial changes (typos, config tweaks) → no workitem
+
+### Phase sequence
+
+```
+Intake → Analyze → Propose* → Plan → Implement → Review → Document → Repo → Archive
+```
+*Propose is conditional — triggered only when multiple viable implementation directions exist.
+
+### Gate rules
+
+- **Human approval required**: Intake, Analyze (AC sign-off), Propose (approach selection), Plan, Review, Document, Repo
+- **Automated**: Architecture sub-phase, QA loop, Regression, Archive
+
+### Key rules
+
+- Never create workitem files until the user explicitly confirms the routing decision
+- Never commit/push/branch without explicit user approval (repo actions phase)
+- Log all plan deviations silently in `implementation.md` — never discard them
+- The QA loop exits only when all ACs pass or user accepts a known gap in writing
 
 ---
 

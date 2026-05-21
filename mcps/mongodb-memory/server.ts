@@ -29,6 +29,11 @@ async function main() {
     { name: "memories_text_search" }
   );
   await db.collection("memories").createIndex({ scope: 1 });
+  await db.collection("workitems").createIndex({ project: 1, wi_path: 1 });
+  await db.collection("workitems").createIndex(
+    { documentation: "text" },
+    { name: "workitems_text_search" }
+  );
 
   const server = new Server(
     { name: "dako-long-term-memory", version: "2.0.0" },
@@ -171,6 +176,22 @@ Call this at the start of a session to restore project context before working.`,
             type:    { type: "string", enum: [...MEMORY_TYPES], description: "Memory type — narrows match if title is ambiguous (optional)" }
           },
           required: ["project", "title"]
+        }
+      },
+      // ── Workitem archive ──────────────────────────────────────────────────
+      {
+        name: "archive_workitem",
+        description: "Archive a completed workitem to the workitems collection. Call from the /wi-archive command after all phases are done.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            wi_path:       { type: "string", description: "Workitem path (e.g. 'WI-memory-layer/20260521-short-term-memory')" },
+            project:       { type: "string", description: "Project name" },
+            username:      { type: "string", description: "Username from git config or env (optional)" },
+            git_commit:    { type: "string", description: "Git commit SHA that closed this workitem (optional)" },
+            documentation: { type: "string", description: "Full text of the Workitem Documentation section from documentation.md" }
+          },
+          required: ["wi_path", "project", "documentation"]
         }
       }
     ]
@@ -345,6 +366,19 @@ Call this at the start of a session to restore project context before working.`,
         return { content: [{ type: "text", text: `No memory found matching title "${title}" in project "${project}".` }] };
       }
       return { content: [{ type: "text", text: `Deleted ${result.deletedCount} memory entry: "${title}"` }] };
+    }
+
+    // ── ARCHIVE WORKITEM ─────────────────────────────────────────────────────
+    if (name === "archive_workitem") {
+      const { wi_path, project, username, git_commit, documentation } = args as any;
+      await db.collection("workitems").insertOne({
+        wi_path, project,
+        ...(username    ? { username }    : {}),
+        ...(git_commit  ? { git_commit }  : {}),
+        documentation,
+        archived_at: new Date()
+      });
+      return { content: [{ type: "text", text: `Workitem archived: ${wi_path} (project: ${project})` }] };
     }
 
     throw new Error(`Unknown tool: ${name}`);
