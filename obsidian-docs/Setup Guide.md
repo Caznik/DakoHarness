@@ -63,6 +63,18 @@ claude --plugin-dir /path/to/DakoHarness
 
 All 20 `/dako:*` commands are now available in this session.
 
+> [!NOTE]
+> In `--plugin-dir` mode you may see a non-blocking `dako-logger: command not found` warning on each hook event. This is expected — session logging is handled by the project-level hooks written by the setup script, so no functionality is lost. To suppress the warning, add `DakoHarness/bin` to your PATH for the session before launching Claude:
+>
+> **Windows (PowerShell):**
+> ```powershell
+> $env:PATH = "C:\path\to\DakoHarness\bin;" + $env:PATH
+> ```
+> **Mac / Linux:**
+> ```bash
+> export PATH="/path/to/DakoHarness/bin:$PATH"
+> ```
+
 ### Step 4 — Set the project root (once per project)
 
 Run this inside Claude Code, in your project directory:
