@@ -3,7 +3,7 @@
 An extensible harness for coding agents. Provides a two-tier memory system, session logging, and custom workflows — installed once, used across every project your agent touches.
 
 **First target:** Claude Code via Plugin Marketplace.  
-**Future targets:** OpenCode, Pi, Codex CLI, and others.
+**Future targets:** OpenCode, Pi, and others.
 
 ---
 
@@ -56,12 +56,44 @@ DakoHarness/
 
 - **Node.js** v18+ (for the long-term memory MCP and logger)
 - **Go** 1.21+ (for the short-term memory MCP, only needed to rebuild the binary)
-- **Docker** (for the MongoDB instance)
+- **MongoDB** 6+ — native install **or** via Docker
+- **Docker** — optional, only needed if MongoDB is not already running
 - **Claude Code** CLI
 
 ---
 
 ## Setup
+
+### Plugin install (recommended)
+
+Clone the repo and run the setup script for your platform, passing the path to the project you want to use DakoHarness with:
+
+```bash
+git clone https://github.com/Caznik/DakoHarness
+cd DakoHarness
+npm install --prefix mcps/mongodb-memory
+
+# Mac / Linux
+./setup.sh /path/to/your/project
+
+# Windows
+.\setup.ps1 -ProjectPath "C:\path\to\your\project"
+```
+
+Then open your project with the plugin:
+
+```bash
+cd /path/to/your/project
+claude --plugin-dir /path/to/DakoHarness
+```
+
+See the [Setup Guide](obsidian-docs/Setup%20Guide.md) for full instructions including verification steps.
+
+---
+
+### Manual / dev setup
+
+Use this if you are developing or extending DakoHarness itself.
 
 ### 1. Start MongoDB
 
@@ -244,18 +276,22 @@ When Claude Code compacts context:
 
 | Phase | Status | Description |
 |---|---|---|
-| 1 — Memory foundation | Done | Long-term MCP, short-term MCP, session logging, slash commands |
-| 2 — Memory hardening | Done | Compaction recovery, session boundaries, team scope, skill registry |
-| 3 — Development workflow | Planned | Skills: /plan, /review; Agents: explore, apply, verify; pre-commit hook |
-| 4 — Skill registry | Done | Auto-generated index, /registry-refresh (delivered in Phase 2) |
-| 5 — Installer | Planned | Install script, cross-platform binary, Plugin Marketplace manifest |
-| 6 — Multi-agent | Planned | Adapters for OpenCode, Pi, Codex CLI |
+| 1 — Memory foundation | Done ✅ | Long-term MCP, short-term MCP, session logging, slash commands |
+| 2 — Memory hardening | Done ✅ | Compaction recovery, session boundaries, team scope, skill registry |
+| 3 — Development workflow | Done ✅ | Workitem workflow, 14 wi-* commands, artifact templates, workitem archive |
+| 4 — Skill registry | Done ✅ | Auto-generated index, /registry-refresh (delivered in Phase 2) |
+| 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
+| 6 — Marketplace | Planned | Submit dako plugin to the Claude Code Community Marketplace |
+| 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi |
 
 ### Backlog
 
 | Item | Description |
 |---|---|
-| Auto registry-refresh on session start | If short-term memory shows the user has been adding or modifying commands recently, auto-run `/registry-refresh` at the start of the next session so the registry is always current |
+| Auto registry-refresh on session start | If short-term memory shows recent command file changes, auto-run `/registry-refresh` at next session start |
+| RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
+| MongoDB dashboard | Visual interface for browsing sessions and memories |
+| Context7 / Notion / Jira MCPs | External knowledge source integrations |
 
 ---
 

@@ -14,7 +14,8 @@ created: 2026-05-20
 | 3 — Development workflow | Done ✅ | Workitem workflow, 14 wi-* commands, artifact templates, workitems archive |
 | 4 — Skill registry | Done ✅ | Delivered early in Phase 2 |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
-| 6 — Multi-agent | Planned | Adapters for OpenCode, Pi, Codex CLI |
+| 6 — Marketplace | Planned | Submit dako plugin to the Claude Code Community Marketplace |
+| 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi, Codex CLI |
 
 ---
 
@@ -69,7 +70,7 @@ DakoHarness is now a proper Claude Code plugin distributed via `--plugin-dir`.
 - `.claude-plugin/plugin.json` — manifest; drives `/dako:*` command namespacing
 - `commands/` — 20 `.md` files (19 migrated from `.claude/commands/` + new `/dako:setup`)
 - `hooks/hooks.json` — `UserPromptSubmit`, `Stop`, `PreCompact` hooks via `dako-logger` wrapper
-- `bin/` — all executables and wrappers auto-added to PATH by the plugin system
+- `bin/` — executables and wrappers; auto-added to PATH on marketplace installs, manual PATH setup required for `--plugin-dir` mode
 
 ### Cross-platform binaries (`bin/`)
 | File | Platform |
@@ -96,12 +97,24 @@ See [[Setup Guide]] for installation steps.
 
 ---
 
-## Phase 6 — Multi-agent (Planned)
+## Phase 6 — Marketplace (Planned)
+
+Publish the `dako` plugin to the Claude Code Community Marketplace so users can install it with a single command instead of cloning the repo and using `--plugin-dir`.
+
+### What this involves
+- Research marketplace submission requirements and review process
+- Meet any packaging, metadata, or security requirements
+- Fix the `dako-logger` PATH issue permanently (marketplace installs add `bin/` to PATH automatically)
+- Submit and iterate through review
+- Post-publish: update Setup Guide with `claude plugin install dako` as the primary install path
+
+---
+
+## Phase 7 — Multi-agent (Backlog)
 
 Per-agent adapter layer for:
 - OpenCode
 - Pi
-- Codex CLI
 
 ---
 
@@ -110,6 +123,8 @@ Per-agent adapter layer for:
 | Item | Description |
 |---|---|
 | Auto registry-refresh on session start | If short-term memory shows recent command file changes, auto-run `/registry-refresh` at next session start |
+| RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
+| Multi-agent adapters | Phase 7 — OpenCode, Pi |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations |
 | Model routing | Route tasks to different models based on complexity |
 | Permission harness | Structured permission management layer |
