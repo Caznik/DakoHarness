@@ -5,7 +5,88 @@ created: 2026-05-20
 
 # Setup Guide
 
-## Prerequisites
+There are two ways to install DakoHarness:
+
+1. **Plugin install (recommended)** — load as a Claude Code plugin via `--plugin-dir`. All commands, hooks, and binaries are managed by the plugin system.
+2. **Standalone dev setup** — manual configuration for developing or extending DakoHarness itself.
+
+---
+
+## Plugin Installation (Recommended)
+
+### Prerequisites
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Node.js | 18+ | Required for long-term MCP and logger |
+| Docker | Any recent | Required for MongoDB |
+| Claude Code | Latest | Must support `--plugin-dir` |
+
+### Step 1 — Get DakoHarness
+
+```bash
+git clone https://github.com/Caznik/DakoHarness
+cd DakoHarness
+npm install --prefix mcps/mongodb-memory
+```
+
+### Step 2 — Run the setup script
+
+From the DakoHarness repo root, run the setup script for your platform. Pass the path to the project where you want to use DakoHarness.
+
+**Mac / Linux:**
+```bash
+./setup.sh /path/to/your/project
+```
+
+**Windows:**
+```powershell
+.\setup.ps1 -TargetProject "C:\path\to\your\project"
+```
+
+The script:
+1. Checks Docker is running (exits with a clear error if not)
+2. Starts a `mcp_mongodb` container — or skips if one is already running
+3. Creates `mcps/mongodb-memory/.env` with MongoDB credentials
+4. Appends the DakoHarness memory protocol block to `<your-project>/CLAUDE.md`
+
+### Step 3 — Open your project with the plugin
+
+```bash
+cd /path/to/your/project
+claude --plugin-dir /path/to/DakoHarness
+```
+
+All 20 `/dako:*` commands are now available in this session.
+
+### Step 4 — Set the project root (once per project)
+
+Run this inside Claude Code, in your project directory:
+
+```
+/dako:setup
+```
+
+This writes `.mcp.json` in the current project with `DAKO_PROJECT_ROOT` set to its path. The short-term memory MCP uses this to scope patterns to your project. You only need to run this once per project.
+
+### Step 5 — Verify
+
+```
+/dako:recall test
+```
+
+No errors (even with no results) means both MCP servers are connected and the plugin is fully operational.
+
+> [!NOTE]
+> You need to repeat Step 3 each time you open Claude Code — the `--plugin-dir` flag is not persisted globally. If you want it permanent, add it to your shell alias or Claude Code settings.
+
+---
+
+## Standalone Dev Setup
+
+Use this only if you are developing or extending DakoHarness itself. All paths are absolute — see the warning below.
+
+### Prerequisites
 
 | Requirement | Version | Notes |
 |---|---|---|
@@ -13,9 +94,6 @@ created: 2026-05-20
 | Docker | Any recent | Required for MongoDB |
 | Claude Code | Latest | Target agent |
 | Go | 1.21+ | Only needed to rebuild the short-term binary |
-
-> [!NOTE]
-> Go is only needed if you need to recompile the short-term memory binary. Pre-built binaries are provided for Windows. Cross-platform binaries (Mac/Linux) are planned for Phase 5.
 
 ---
 

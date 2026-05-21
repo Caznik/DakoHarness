@@ -1,6 +1,6 @@
 ---
 name: promote
-description: Promote a short-term pattern to long-term memory. Usage: /promote [keywords]
+description: "Promote a short-term pattern to long-term memory. Usage: /promote [keywords]"
 ---
 
 Move a short-term pattern into permanent long-term memory for the current project.

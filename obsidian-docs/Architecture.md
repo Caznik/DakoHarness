@@ -9,36 +9,51 @@ created: 2026-05-20
 
 ```
 DakoHarness/
+├── .claude-plugin/
+│   └── plugin.json             Plugin manifest (name: "dako", version, author)
+├── commands/                   Plugin commands — available as /dako:<name> (20 total)
+│   ├── recall.md               Memory commands
+│   ├── promote.md
+│   ├── promote-team.md
+│   ├── session-end.md
+│   ├── registry-refresh.md
+│   ├── setup.md                /dako:setup — sets DAKO_PROJECT_ROOT per project
+│   ├── wi-start.md             Workitem workflow — unified drivers
+│   ├── wi-next.md
+│   ├── wi-status.md
+│   ├── wi-park.md
+│   ├── wi-cancel.md
+│   ├── wi-intake.md            Workitem workflow — individual phases
+│   ├── wi-analyze.md
+│   ├── wi-propose.md
+│   ├── wi-plan.md
+│   ├── wi-implement.md
+│   ├── wi-review.md
+│   ├── wi-document.md
+│   ├── wi-repo.md
+│   └── wi-archive.md
+├── hooks/
+│   └── hooks.json              Plugin hook configuration (UserPromptSubmit, Stop, PreCompact)
+├── bin/                        Auto-added to PATH by plugin system
+│   ├── logger.mjs              Hook companion — writes session transcripts to MongoDB
+│   ├── dako-logger             Unix wrapper: resolves logger.mjs by $DIR (no cwd dependency)
+│   ├── dako-logger.bat         Windows wrapper
+│   ├── dako-stm                Unix wrapper: detects OS via uname, execs platform binary
+│   ├── dako-stm.bat            Windows wrapper → dako-stm.exe
+│   ├── dako-stm.exe            Short-term MCP binary (Windows amd64)
+│   ├── dako-stm-linux          Short-term MCP binary (Linux amd64)
+│   └── dako-stm-darwin         Short-term MCP binary (macOS amd64)
 ├── mcps/
 │   ├── mongodb-memory/         Long-term memory MCP (Node.js + TypeScript)
 │   │   ├── server.ts           MCP server (remember, recall, get_context, promote_to_team,
 │   │   │                         forget, archive_workitem, …)
-│   │   └── logger.mjs          Hook companion — writes session transcripts to MongoDB
-│   └── short-term-memory/      Short-term pattern memory MCP (Go + SQLite)
+│   │   └── logger.mjs          Dev setup copy (standalone use with .claude/settings.json)
+│   └── short-term-memory/      Short-term pattern memory MCP source (Go + SQLite)
 │       └── main.go             MCP server (remember_pattern, find_patterns, get_recent_patterns)
 ├── .claude/
-│   ├── settings.json           Hook configuration
+│   ├── settings.json           Hook configuration for standalone DakoHarness dev setup
 │   ├── skill-registry.md       Auto-generated skill index (gitignored)
-│   └── commands/               Slash commands (19 total)
-│       ├── recall.md           Memory commands
-│       ├── promote.md
-│       ├── promote-team.md
-│       ├── session-end.md
-│       ├── registry-refresh.md
-│       ├── wi-start.md         Workitem workflow — unified drivers
-│       ├── wi-next.md
-│       ├── wi-status.md
-│       ├── wi-park.md
-│       ├── wi-cancel.md
-│       ├── wi-intake.md        Workitem workflow — individual phases
-│       ├── wi-analyze.md
-│       ├── wi-propose.md
-│       ├── wi-plan.md
-│       ├── wi-implement.md
-│       ├── wi-review.md
-│       ├── wi-document.md
-│       ├── wi-repo.md
-│       └── wi-archive.md
+│   └── commands/               Dev-setup commands (mirrors commands/ — for local dev use)
 ├── workitem/                   Workitem traceability artifacts
 │   └── WI-<feature>/
 │       ├── source_of_truth.md  Overall workitem state
@@ -50,7 +65,8 @@ DakoHarness/
 │           ├── implementation.md
 │           ├── review.md
 │           └── documentation.md
-├── .mcp.json                   MCP server registrations
+├── setup.sh / setup.ps1        First-time infrastructure setup (Docker, .env, CLAUDE.md injection)
+├── .mcp.json                   MCP server registrations (relative paths — resolved from plugin root)
 ├── CLAUDE.md                   Agent instructions, memory protocol, workitem protocol
 └── README.md                   Project documentation
 ```
@@ -91,6 +107,8 @@ graph TD
 | `UserPromptSubmit` | User sends a message | Log user turn to MongoDB `messages` |
 | `Stop` | Agent finishes responding | Log assistant turn from JSONL transcript |
 | `PreCompact` | Context compression starts | Save last 3 assistant turns as compaction snapshot |
+
+**Plugin hook resolution:** `hooks/hooks.json` calls `dako-logger <event>`. The plugin system adds `bin/` to PATH, so `dako-logger` resolves to `bin/dako-logger` (Unix) or `bin/dako-logger.bat` (Windows). The wrapper calls `node "$DIR/logger.mjs"` — `$DIR` is the wrapper's own directory, so the path is stable regardless of cwd.
 
 ---
 

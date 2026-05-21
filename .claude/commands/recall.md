@@ -1,6 +1,6 @@
 ---
 name: recall
-description: Search long-term memory for past decisions, conventions, bugs, and lessons relevant to the current task. Usage: /recall <keywords>
+description: "Search long-term memory for past decisions, conventions, bugs, and lessons relevant to the current task. Usage: /recall <keywords>"
 ---
 
 Search long-term memory for context relevant to the keywords the user provided.

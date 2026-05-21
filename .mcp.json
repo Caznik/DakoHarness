@@ -2,12 +2,12 @@
   "mcpServers": {
     "dako-long-term-memory": {
       "command": "node",
-      "args": ["C:/lab/Proyectos/DakoHarness/mcps/mongodb-memory/server.js"]
+      "args": ["./mcps/mongodb-memory/server.js"]
     },
     "dako-short-term-memory": {
-      "command": "C:/lab/Proyectos/DakoHarness/mcps/short-term-memory/short-term-memory.exe",
+      "command": "dako-stm",
       "env": {
-        "DAKO_PROJECT_ROOT": "C:/lab/Proyectos/DakoHarness"
+        "DAKO_PROJECT_ROOT": ""
       }
     }
   }

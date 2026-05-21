@@ -13,7 +13,7 @@ created: 2026-05-20
 | 2 — Memory hardening | Done ✅ | Compaction recovery, session boundaries, team scope, skill registry |
 | 3 — Development workflow | Done ✅ | Workitem workflow, 14 wi-* commands, artifact templates, workitems archive |
 | 4 — Skill registry | Done ✅ | Delivered early in Phase 2 |
-| 5 — Installer | Planned | Install script, cross-platform binaries, Plugin Marketplace manifest |
+| 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
 | 6 — Multi-agent | Planned | Adapters for OpenCode, Pi, Codex CLI |
 
 ---
@@ -61,15 +61,38 @@ See [[Workitem Workflow]] for full documentation.
 
 ---
 
-## Phase 5 — Installer (Planned)
+## Phase 5 — Installer ✅
 
-- Install script that writes `.mcp.json`, `settings.json` (with correct absolute paths), CLAUDE.md block, `.gitignore` entries
-- CLAUDE.md template for target projects
-- Cross-platform short-term memory binary (Go cross-compile for Mac / Linux / Windows)
-- Claude Plugin Marketplace manifest
+DakoHarness is now a proper Claude Code plugin distributed via `--plugin-dir`.
+
+### Plugin structure (`name: "dako"`)
+- `.claude-plugin/plugin.json` — manifest; drives `/dako:*` command namespacing
+- `commands/` — 20 `.md` files (19 migrated from `.claude/commands/` + new `/dako:setup`)
+- `hooks/hooks.json` — `UserPromptSubmit`, `Stop`, `PreCompact` hooks via `dako-logger` wrapper
+- `bin/` — all executables and wrappers auto-added to PATH by the plugin system
+
+### Cross-platform binaries (`bin/`)
+| File | Platform |
+|---|---|
+| `dako-stm.exe` | Windows |
+| `dako-stm-linux` | Linux (amd64) |
+| `dako-stm-darwin` | macOS (amd64) |
+| `dako-stm` | Unix wrapper (uname detection) |
+| `dako-stm.bat` | Windows wrapper |
+| `dako-logger` | Unix hook wrapper |
+| `dako-logger.bat` | Windows hook wrapper |
+
+### Setup
+- `setup.sh` / `setup.ps1` — start MongoDB via Docker, create `.env`, inject CLAUDE.md memory protocol into target project
+- `/dako:setup` skill — set `DAKO_PROJECT_ROOT` per project
+
+### Distribution
+Loaded via `--plugin-dir ./DakoHarness` or `claude plugin install`. Community marketplace submission is a follow-up.
+
+See [[Setup Guide]] for installation steps.
 
 > [!NOTE]
-> Go cross-compilation for the short-term memory binary is planned here. Until then, only the Windows `.exe` is pre-built.
+> Runtime ACs (command resolution, hook firing, MCP path resolution) require a live `--plugin-dir` test. Static validation passes (`claude plugin validate .`).
 
 ---
 
