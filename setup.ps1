@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # DakoHarness setup script for Windows (PowerShell)
 # Usage: .\setup.ps1 [-ProjectPath <path>]
 param(
@@ -13,7 +13,7 @@ Write-Host "`nDakoHarness Setup" -ForegroundColor Cyan
 Write-Host "=================" -ForegroundColor Cyan
 
 # 1. MongoDB — detect native or Docker
-Write-Host "`n[1/4] MongoDB..." -ForegroundColor Yellow
+Write-Host "`n[1/5] MongoDB..." -ForegroundColor Yellow
 $mongoDetected = $false
 try {
   $tcpTest = Test-NetConnection -ComputerName localhost -Port 27017 -InformationLevel Quiet -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
@@ -46,7 +46,7 @@ if (-not $mongoDetected) {
 }
 
 # 2. Credentials — prompt with defaults from existing .env or hardcoded fallback
-Write-Host "`n[2/4] Credentials..." -ForegroundColor Yellow
+Write-Host "`n[2/5] Credentials..." -ForegroundColor Yellow
 $DefaultUser = "dako"
 $DefaultPass = "harness"
 
@@ -83,14 +83,20 @@ Set-Content -Path $EnvPath -Value $EnvContent -Encoding utf8
 Write-Host "      .env written to $EnvPath" -ForegroundColor Green
 
 # 3. Test connection
-Write-Host "`n[3/4] Testing connection..." -ForegroundColor Yellow
+Write-Host "`n[3/5] Testing connection..." -ForegroundColor Yellow
 $NmPath = Join-Path $ScriptDir "mcps\mongodb-memory\node_modules\mongodb"
 if (-not (Test-Path $NmPath)) {
   Write-Host "      Skipping — run 'npm install --prefix mcps/mongodb-memory' first." -ForegroundColor Yellow
 } else {
   $NmPathFwd = (Join-Path $ScriptDir "mcps/mongodb-memory/node_modules/mongodb") -replace '\\', '/'
-  $testScript = "const {MongoClient}=require('$NmPathFwd');MongoClient.connect('$MongoUri',{serverSelectionTimeoutMS:3000}).then(c=>{c.close();process.exit(0)}).catch(()=>process.exit(1));"
-  node -e $testScript 2>$null
+  $tmpJs = [System.IO.Path]::GetTempFileName() -replace '\.tmp$', '.js'
+  $jsContent = 'var MC=require(' + "'" + $NmPathFwd + "'" + ').MongoClient;' +
+    'MC.connect(' + "'" + $MongoUri + "'" + ',{serverSelectionTimeoutMS:3000})' +
+    '.then(function(c){c.close();process.exit(0)})' +
+    '.catch(function(){process.exit(1)});'
+  [System.IO.File]::WriteAllText($tmpJs, $jsContent)
+  node $tmpJs 2>$null
+  Remove-Item $tmpJs -Force -ErrorAction SilentlyContinue
   if ($LASTEXITCODE -eq 0) {
     Write-Host "      Connected successfully." -ForegroundColor Green
   } else {
@@ -99,7 +105,7 @@ if (-not (Test-Path $NmPath)) {
 }
 
 # 4. Write CLAUDE.md block
-Write-Host "`n[4/4] Writing CLAUDE.md memory protocol to $ProjectPath..." -ForegroundColor Yellow
+Write-Host "`n[4/5] Writing CLAUDE.md memory protocol to $ProjectPath..." -ForegroundColor Yellow
 $ClaudeMdPath = Join-Path $ProjectPath "CLAUDE.md"
 $Block = @"
 
@@ -147,5 +153,53 @@ if (Test-Path $ClaudeMdPath) {
   Write-Host "      Created CLAUDE.md" -ForegroundColor Green
 }
 
+# 5. Write hooks and MCP config
+Write-Host "`n[5/5] Configuring hooks and MCP servers..." -ForegroundColor Yellow
+$SettingsDir = Join-Path $ProjectPath ".claude"
+$SettingsFile = Join-Path $SettingsDir "settings.json"
+New-Item -ItemType Directory -Force -Path $SettingsDir | Out-Null
+
+$LoggerPath = (Join-Path $ScriptDir "mcps\mongodb-memory\logger.mjs") -replace '\\', '/'
+$StmBin     = (Join-Path $ScriptDir "bin\dako-stm.exe") -replace '\\', '/'
+$ServerPath = (Join-Path $ScriptDir "mcps\mongodb-memory\server.js") -replace '\\', '/'
+$ProjectFwd = ($ProjectPath.ToString()) -replace '\\', '/'
+
+if (Test-Path $SettingsFile) {
+  Write-Host "      .claude/settings.json already exists — add hooks manually:" -ForegroundColor Yellow
+  Write-Host "      `"node $LoggerPath <event>`"" -ForegroundColor Yellow
+} else {
+  $SettingsContent = @"
+{
+  "hooks": {
+    "UserPromptSubmit": [{"matcher": "", "hooks": [{"type": "command", "command": "node $LoggerPath UserPromptSubmit"}]}],
+    "Stop": [{"matcher": "", "hooks": [{"type": "command", "command": "node $LoggerPath Stop"}]}],
+    "PreCompact": [{"matcher": "", "hooks": [{"type": "command", "command": "node $LoggerPath PreCompact"}]}],
+    "SessionStart": []
+  }
+}
+"@
+  Set-Content -Path $SettingsFile -Value $SettingsContent -Encoding utf8
+  Write-Host "      .claude/settings.json written." -ForegroundColor Green
+}
+
+$McpContent = @"
+{
+  "mcpServers": {
+    "dako-long-term-memory": {
+      "command": "node",
+      "args": ["$ServerPath"]
+    },
+    "dako-short-term-memory": {
+      "command": "$StmBin",
+      "env": {
+        "DAKO_PROJECT_ROOT": "$ProjectFwd"
+      }
+    }
+  }
+}
+"@
+Set-Content -Path (Join-Path $ProjectPath ".mcp.json") -Value $McpContent -Encoding utf8
+Write-Host "      .mcp.json written." -ForegroundColor Green
+
 Write-Host "`nSetup complete." -ForegroundColor Cyan
-Write-Host "Next: run 'claude --plugin-dir <path-to-DakoHarness>' and then '/dako:setup' in your project." -ForegroundColor Cyan
+Write-Host "Next: run 'claude --plugin-dir `"$ScriptDir`"' in your project directory." -ForegroundColor Cyan

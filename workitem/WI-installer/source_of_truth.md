@@ -2,14 +2,14 @@
 wi: WI-installer
 created: 2026-05-21
 updated: 2026-05-21
-status: active
+status: completed
 
 ---
 
 ## Current State
 
 **Active sub-feature:** 20260521-native-mongodb-support
-**Current phase:** repo
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
@@ -17,7 +17,7 @@ status: active
 | Sub-feature | Status | Phases completed | Notes |
 |---|---|---|---|
 | 20260521-claude-code-install-script | completed | all | — |
-| 20260521-native-mongodb-support | in-progress | — | — |
+| 20260521-native-mongodb-support | completed | all | — |
 
 ## Active Blockers
 

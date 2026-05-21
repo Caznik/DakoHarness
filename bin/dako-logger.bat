@@ -1,2 +1,2 @@
 @echo off
-node "%~dp0logger.mjs" %*
+node "%~dp0..\mcps\mongodb-memory\logger.mjs" %*
