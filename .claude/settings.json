@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node C:/lab/Proyectos/DakoHarness/mcps/mongodb-memory/logger.mjs UserPromptSubmit"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node C:/lab/Proyectos/DakoHarness/mcps/mongodb-memory/logger.mjs Stop"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node C:/lab/Proyectos/DakoHarness/mcps/mongodb-memory/logger.mjs PreCompact"
+          }
+        ]
+      }
+    ],
+    "SessionStart": []
+  }
+}

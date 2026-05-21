@@ -1,0 +1,94 @@
+# DakoHarness
+
+An extensible harness for coding agents. Provides a two-tier memory system (long-term MongoDB + short-term SQLite) and session logging via hooks. First target: Claude Code via Plugin Marketplace. Future targets: OpenCode, Pi, and others.
+
+## Architecture
+
+```
+mcps/
+  mongodb-memory/   Long-term memory MCP (Node.js, MongoDB)
+  short-term-memory/ Short-term pattern memory MCP (Go, SQLite, 7-day TTL)
+.claude/
+  settings.json     Hook configuration (UserPromptSubmit + Stop + PreCompact)
+  commands/         Custom slash commands (/recall, /promote, /promote-team, /session-end)
+.mcp.json           MCP server registrations
+```
+
+---
+
+## Memory Protocol
+
+You have two memory systems. Use them actively — they are the core of what is being built here.
+
+### Session Start
+
+Start every session blank. Do **not** preload memory. Wait for the user's first task, then decide if memory is relevant.
+
+**After compaction:** Call `get_context` with `project: "DakoHarness"` once to check for compaction snapshots (tag `auto-cleanup`). If found, read to understand where work was interrupted, then delete with `forget`. Do not load all memories — only handle the snapshot.
+
+### During a Session — When to Search
+
+Before starting a task, search memory only if the task seems related to past work:
+- Call `find_patterns` with task keywords if it feels like something done recently in this project
+- Call `recall` with keywords if you need a past decision or convention
+
+Do not search memory for tasks that are clearly unrelated to past DakoHarness work.
+
+### During a Session — When to Save
+
+**Save to short-term memory** (`remember_pattern`) when:
+- The user explicitly accepts an approach ("yes", "looks good", "do it that way", "perfect")
+- A bug is fixed and the fix has a reusable pattern
+- A code style or convention is established for the first time
+- You try two approaches and the user picks one — save which one and why
+
+**Save to long-term memory** (`remember`) when:
+- An architectural decision is made that should outlast this week
+- A convention is confirmed to be permanent ("always use X in this project")
+- Something important is learned about the project that isn't obvious from the code
+- A bug fix reveals a systemic issue worth tracking permanently
+
+**Do not save** routine tool calls, exploratory attempts that were rejected, or information already derivable from the codebase.
+
+### Before Starting a Task
+
+If a task feels similar to something done recently, call `find_patterns` with relevant keywords before starting. Apply matching patterns unless the user indicates otherwise.
+
+---
+
+## Tool Reference
+
+| Situation | Tool | Memory tier |
+|---|---|---|
+| After compaction — check for snapshot | `get_context` | Long-term |
+| User accepts an approach | `remember_pattern` | Short-term |
+| Permanent architectural decision | `remember` type: `decision` | Long-term |
+| Code convention established | `remember` type: `convention` | Long-term |
+| Bug fixed with reusable lesson | `remember` type: `bug` | Long-term |
+| Important project fact | `remember` type: `context` | Long-term |
+| Before similar task | `find_patterns` | Short-term |
+| Searching past decisions | `recall` | Long-term |
+
+### Memory Types (long-term)
+
+- `decision` — architectural or design choice with reasoning
+- `convention` — naming rule, code style, pattern for this project
+- `bug` — a bug and how it was fixed, to avoid repeating it
+- `context` — important project fact not obvious from the code
+- `lesson` — what went wrong and what was learned
+
+---
+
+## Skill Registry
+
+A list of available slash commands is in `.claude/skill-registry.md`. Consult it when a user's request sounds like a workflow task that might match a command (e.g. "search memory", "end the session", "save this pattern"). Run `/registry-refresh` after adding or removing a command file.
+
+---
+
+## Behavior Guidelines
+
+- **Save the WHY, not just the what.** A memory without reasoning is useless. Include why the user accepted the approach, not just what was done.
+- **Short-term first, promote to long-term if it proves durable.** If the same pattern appears across multiple sessions, it belongs in long-term memory.
+- **One memory per insight.** Don't bundle multiple decisions into one entry — they should be searchable and retrievable independently.
+- **Project name is always `"DakoHarness"`, agent is always `"claude-code"`** when calling memory tools in this project.
+- Session transcripts are captured automatically by hooks — you do not need to log individual messages manually.

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"C:\\\\lab\\\\Proyectos\\\\DakoHarness\" -Recurse -File -Exclude \"node_modules\" | Where-Object { $_.FullName -notmatch \"node_modules\" } | Select-Object FullName)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "PowerShell(docker exec mcp_mongodb *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(go version *)",
+      "mcp__dako-short-term-memory__remember_pattern",
+      "mcp__dako-short-term-memory__find_patterns",
+      "mcp__dako-long-term-memory__get_context",
+      "mcp__dako-short-term-memory__get_recent_patterns",
+      "mcp__dako-long-term-memory__remember",
+      "mcp__dako-long-term-memory__recall",
+      "Bash(npx tsc *)",
+      "mcp__dako-long-term-memory__forget",
+      "PowerShell($payload = '{\"prompt\":\"test boundary detection\",\"cwd\":\"C:/lab/Proyectos/DakoHarness\",\"session_id\":\"test-new-session-id-999\"}'; $payload | node \"C:/lab/Proyectos/DakoHarness/mcps/mongodb-memory/logger.mjs\" UserPromptSubmit 2>&1; Write-Output \"exit: $LASTEXITCODE\"; Get-Content \"C:\\\\lab\\\\Proyectos\\\\DakoHarness\\\\.claude\\\\.dako_session\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "dako-harness-memory"
+  ]
+}
