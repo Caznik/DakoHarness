@@ -288,6 +288,12 @@ When Claude Code compacts context:
 
 | Item | Description |
 |---|---|
+| Sub-agent delegation for implementation | Delegate coding tasks to sub-agents to keep the main context clean and enable parallel work across plan steps |
+| Pluggable long-term memory backend | Abstract the storage layer so alternatives to MongoDB (PostgreSQL, SQLite, hosted) are supported; MongoDB remains default |
+| Context management improvements | Proactive compaction strategy, context pressure monitoring, tighter two-tier memory integration |
+| Memory quality over time | Deduplicate, flag stale, and merge contradicted memories — prevents long-lived projects from accumulating noise |
+| Semantic search for recall | Embedding-based recall so vague or paraphrased queries find the right memories, not just exact keyword matches |
+| `/dako:doctor` health check | Single command to verify the full installation: MongoDB, hooks, both MCPs, short-term binary |
 | Auto registry-refresh on session start | If short-term memory shows recent command file changes, auto-run `/registry-refresh` at next session start |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | MongoDB dashboard | Visual interface for browsing sessions and memories |
