@@ -6,5 +6,7 @@
     "name": "Caznik"
   },
   "homepage": "https://github.com/Caznik/DakoHarness",
-  "repository": "https://github.com/Caznik/DakoHarness"
+  "repository": "https://github.com/Caznik/DakoHarness",
+  "license": "MIT",
+  "keywords": ["memory", "workflow", "mongodb", "session-logging", "harness"]
 }
