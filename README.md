@@ -22,25 +22,33 @@ Coding agents start every session without memory. DakoHarness gives them persist
 
 ```
 DakoHarness/
+├── .claude-plugin/
+│   └── plugin.json             Plugin manifest (name: "dako")
+├── commands/                   20 plugin commands — available as /dako:<name>
+│   ├── setup.md                Full first-time project setup
+│   ├── recall.md               /dako:recall — search long-term memory
+│   ├── promote.md              /dako:promote — short-term → long-term
+│   ├── promote-team.md         /dako:promote-team — project → team scope
+│   ├── session-end.md          /dako:session-end
+│   ├── registry-refresh.md     /dako:registry-refresh
+│   └── wi-*.md                 Workitem workflow (14 commands)
+├── hooks/
+│   └── hooks.json              Plugin hooks (UserPromptSubmit, Stop, PreCompact)
+├── bin/                        Cross-platform executables (auto-added to PATH by plugin system)
+│   ├── dako-logger / .bat      Session logging hook wrapper
+│   └── dako-stm*               Short-term MCP binaries (Windows, Linux, macOS)
 ├── mcps/
 │   ├── mongodb-memory/         Long-term memory MCP (Node.js + TypeScript)
-│   │   ├── server.ts           MCP server — tools: remember, recall, get_context,
-│   │   │                       promote_to_team, forget, start_session, log_message, ...
-│   │   └── logger.mjs          Hook companion — writes session transcripts to MongoDB
-│   └── short-term-memory/      Short-term pattern memory MCP (Go + SQLite)
-│       └── main.go             MCP server — tools: remember_pattern, find_patterns,
+│   │   ├── server.ts/js        MCP server — remember, recall, get_context,
+│   │   │                       promote_to_team, forget, archive_workitem, …
+│   │   └── logger.mjs          Session logging hook companion
+│   └── short-term-memory/      Short-term memory MCP source (Go + SQLite)
+│       └── main.go             MCP server — remember_pattern, find_patterns,
 │                               get_recent_patterns
-├── .claude/
-│   ├── settings.json           Hook configuration (UserPromptSubmit + Stop + PreCompact)
-│   ├── commands/               Custom slash commands
-│   │   ├── recall.md           /recall <keywords>
-│   │   ├── promote.md          /promote [keywords]
-│   │   ├── promote-team.md     /promote-team [keywords]
-│   │   ├── session-end.md      /session-end
-│   │   └── registry-refresh.md /registry-refresh
-│   └── skill-registry.md       Auto-generated skill index (gitignored)
-├── .mcp.json                   MCP server registrations for Claude Code
-└── CLAUDE.md                   Agent instructions — memory protocol, behavior guidelines
+├── claude-plugin-release/      Self-contained marketplace submission package
+├── workitem/                   Workitem traceability artifacts
+├── setup.sh / setup.ps1        Manual infrastructure setup scripts
+└── CLAUDE.md                   Agent instructions — memory and workitem protocol
 ```
 
 ### Two-tier memory model
@@ -239,11 +247,17 @@ Use `/promote-team` to elevate a project memory to team scope when it contains a
 
 | Command | Description |
 |---|---|
-| `/recall <keywords>` | Search long-term memory for past decisions, conventions, and lessons |
-| `/promote [keywords]` | Promote a short-term pattern to permanent long-term memory |
-| `/promote-team [keywords]` | Promote a project memory to team scope (visible across all projects) |
-| `/session-end` | Review patterns from this session, promote durable ones, save in-progress context |
-| `/registry-refresh` | Regenerate `.claude/skill-registry.md` after adding or removing a command |
+| `/dako:setup` | Full first-time project setup — MongoDB, .env, .mcp.json, CLAUDE.md injection |
+| `/dako:recall <keywords>` | Search long-term memory for past decisions, conventions, and lessons |
+| `/dako:promote [keywords]` | Promote a short-term pattern to permanent long-term memory |
+| `/dako:promote-team [keywords]` | Promote a project memory to team scope (visible across all projects) |
+| `/dako:session-end` | Review patterns from this session, promote durable ones, save in-progress context |
+| `/dako:registry-refresh` | Regenerate the skill registry after adding or removing a command |
+| `/dako:wi-start` | Start a new workitem — entry point for the structured development workflow |
+| `/dako:wi-next` | Advance the active workitem to the next phase |
+| `/dako:wi-status` | Show current workitem state and phase |
+| `/dako:wi-park` / `/dako:wi-cancel` | Pause or cancel an active workitem |
+| `/dako:wi-<phase>` | Run a specific phase individually (intake, analyze, propose, plan, implement, review, document, repo, archive) |
 
 ---
 
@@ -278,7 +292,7 @@ When Claude Code compacts context:
 |---|---|---|
 | 1 — Memory foundation | Done ✅ | Long-term MCP, short-term MCP, session logging, slash commands |
 | 2 — Memory hardening | Done ✅ | Compaction recovery, session boundaries, team scope, skill registry |
-| 3 — Development workflow | Done ✅ | Workitem workflow, 19 wi-* commands, artifact templates, workitem archive |
+| 3 — Development workflow | Done ✅ | Workitem workflow, 14 wi-* commands, artifact templates, workitem archive |
 | 4 — Skill registry | Done ✅ | Auto-generated index, /registry-refresh (delivered in Phase 2) |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
 | 6 — Marketplace | In progress 🔄 | Plugin folder ready, validation passes — pending community marketplace submission |

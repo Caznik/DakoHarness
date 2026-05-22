@@ -14,7 +14,7 @@ created: 2026-05-20
 | 3 — Development workflow | Done ✅ | Workitem workflow, 14 wi-* commands, artifact templates, workitems archive |
 | 4 — Skill registry | Done ✅ | Delivered early in Phase 2 |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
-| 6 — Marketplace | Planned | Submit dako plugin to the Claude Code Community Marketplace |
+| 6 — Marketplace | In progress 🔄 | Plugin folder ready, validation passes — pending community marketplace submission |
 | 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi, Codex CLI |
 
 ---

@@ -17,7 +17,7 @@ DakoHarness/
 │   ├── promote-team.md
 │   ├── session-end.md
 │   ├── registry-refresh.md
-│   ├── setup.md                /dako:setup — sets DAKO_PROJECT_ROOT per project
+│   ├── setup.md                /dako:setup — full first-time project setup (MongoDB, .env, .mcp.json, CLAUDE.md)
 │   ├── wi-start.md             Workitem workflow — unified drivers
 │   ├── wi-next.md
 │   ├── wi-status.md
@@ -35,8 +35,8 @@ DakoHarness/
 ├── hooks/
 │   └── hooks.json              Plugin hook configuration (UserPromptSubmit, Stop, PreCompact)
 ├── bin/                        Auto-added to PATH by plugin system
-│   ├── logger.mjs              Hook companion — writes session transcripts to MongoDB
-│   ├── dako-logger             Unix wrapper: resolves logger.mjs by $DIR (no cwd dependency)
+│   ├── logger.mjs              Legacy copy — not used by hooks (kept for compatibility)
+│   ├── dako-logger             Unix wrapper: calls mcps/mongodb-memory/logger.mjs via $DIR/../
 │   ├── dako-logger.bat         Windows wrapper
 │   ├── dako-stm                Unix wrapper: detects OS via uname, execs platform binary
 │   ├── dako-stm.bat            Windows wrapper → dako-stm.exe
@@ -65,7 +65,8 @@ DakoHarness/
 │           ├── implementation.md
 │           ├── review.md
 │           └── documentation.md
-├── setup.sh / setup.ps1        First-time infrastructure setup (Docker, .env, CLAUDE.md injection)
+├── claude-plugin-release/      Self-contained marketplace submission package
+├── setup.sh / setup.ps1        Manual infrastructure setup scripts (--plugin-dir installs)
 ├── .mcp.json                   MCP server registrations (relative paths — resolved from plugin root)
 ├── CLAUDE.md                   Agent instructions, memory protocol, workitem protocol
 └── README.md                   Project documentation
@@ -108,7 +109,7 @@ graph TD
 | `Stop` | Agent finishes responding | Log assistant turn from JSONL transcript |
 | `PreCompact` | Context compression starts | Save last 3 assistant turns as compaction snapshot |
 
-**Plugin hook resolution:** `hooks/hooks.json` calls `dako-logger <event>`. The plugin system adds `bin/` to PATH, so `dako-logger` resolves to `bin/dako-logger` (Unix) or `bin/dako-logger.bat` (Windows). The wrapper calls `node "$DIR/logger.mjs"` — `$DIR` is the wrapper's own directory, so the path is stable regardless of cwd.
+**Plugin hook resolution:** `hooks/hooks.json` calls `dako-logger <event>`. The plugin system adds `bin/` to PATH, so `dako-logger` resolves to `bin/dako-logger` (Unix) or `bin/dako-logger.bat` (Windows). The wrapper calls `node "$DIR/../mcps/mongodb-memory/logger.mjs"` — `$DIR` is the wrapper's own directory, so the path resolves to the MCP server's logger regardless of cwd.
 
 ---
 

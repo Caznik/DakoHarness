@@ -9,7 +9,7 @@ created: 2026-05-20
 > An extensible harness for coding agents. Provides persistent memory, session logging, and custom workflows — installed once, used across every project your agent touches.
 
 **First target:** Claude Code via Plugin Marketplace.  
-**Future targets:** OpenCode, Pi, Codex CLI.
+**Future targets:** OpenCode, Pi.
 
 ---
 
