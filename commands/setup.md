@@ -42,14 +42,19 @@ Once after installing the dako plugin in a new project. Also safe to re-run to v
 ### 3. Prompt for MongoDB credentials
 
 - Check if `<DAKO_HOME>/mcps/mongodb-memory/.env` already exists.
-  - If it exists: read `MONGO_USER` and `MONGO_PASSWORD` from it to use as defaults.
-  - If not: use defaults `dako` / `harness`.
+  - If it exists: read `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_DB` from it to use as defaults. Skip prompting and use these values silently (needed for Step 5).
+  - If not: use defaults `dako` / `harness` / `localhost` / `27017` / `agent_memory`.
 - If `.env` does not yet exist, ask the user (show default in brackets):
   - `"MongoDB username [<default>]:"`
   - `"MongoDB password [<default>]:"`
-  - Accept empty input to keep the default.
-- If `.env` already exists: skip prompting and use the values read from it silently (needed for Step 5).
-- Construct: `MONGO_URI=mongodb://<user>:<pass>@localhost:27017/agent_memory?authSource=admin`
+  - `"Advanced MongoDB config? (host/port/db) [y/N]:"`
+    - If `y`: ask:
+      - `"MongoDB host [localhost]:"`
+      - `"MongoDB port [27017]:"`
+      - `"MongoDB database [agent_memory]:"`
+    - If `N` or empty: use `localhost`, `27017`, `agent_memory`.
+  - Accept empty input to keep any default.
+- Construct: `MONGO_URI=mongodb://<user>:<pass>@<host>:<port>/<db>?authSource=admin`
 
 ### 4. Write .env (skip if already present)
 
@@ -58,9 +63,9 @@ Once after installing the dako plugin in a new project. Also safe to re-run to v
   ```
   MONGO_USER=<user>
   MONGO_PASSWORD=<pass>
-  MONGO_HOST=localhost
-  MONGO_PORT=27017
-  MONGO_DB=agent_memory
+  MONGO_HOST=<host>
+  MONGO_PORT=<port>
+  MONGO_DB=<db>
   MONGO_URI=<uri>
   DAKO_AGENT=claude-code
   ```

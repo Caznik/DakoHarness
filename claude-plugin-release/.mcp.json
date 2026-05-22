@@ -5,7 +5,7 @@
       "args": ["./mcps/mongodb-memory/server.js"]
     },
     "dako-short-term-memory": {
-      "command": "./bin/dako-stm.exe",
+      "command": "dako-stm",
       "env": {
         "DAKO_PROJECT_ROOT": ""
       }
