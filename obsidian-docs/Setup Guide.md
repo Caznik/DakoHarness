@@ -83,7 +83,15 @@ Run this inside Claude Code, in your project directory:
 /dako:setup
 ```
 
-This writes `.mcp.json` in the current project with `DAKO_PROJECT_ROOT` set to its path. The short-term memory MCP uses this to scope patterns to your project. You only need to run this once per project.
+This runs the full DakoHarness setup for the current project:
+- Checks MongoDB on port 27017 and starts a Docker container if needed
+- Prompts for MongoDB credentials (shows existing defaults if already configured)
+- Writes `mcps/mongodb-memory/.env` with connection settings
+- Tests the MongoDB connection
+- Writes `.mcp.json` with both MCP servers and correct absolute paths
+- Injects the DakoHarness memory protocol block into the project's `CLAUDE.md`
+
+Already-configured components are skipped automatically, so the command is safe to re-run. The DakoHarness installation path is stored in `~/.dako/config` after the first run — subsequent runs in any project will not ask for it again.
 
 ### Step 5 — Verify
 
