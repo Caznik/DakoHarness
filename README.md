@@ -248,6 +248,7 @@ Use `/promote-team` to elevate a project memory to team scope when it contains a
 | Command | Description |
 |---|---|
 | `/dako:setup` | Full first-time project setup — MongoDB, .env, .mcp.json, CLAUDE.md injection |
+| `/dako:doctor` | Health check — verify MongoDB, .env, hooks, both MCPs, and STM binary in one shot |
 | `/dako:recall <keywords>` | Search long-term memory for past decisions, conventions, and lessons |
 | `/dako:promote [keywords]` | Promote a short-term pattern to permanent long-term memory |
 | `/dako:promote-team [keywords]` | Promote a project memory to team scope (visible across all projects) |
@@ -307,7 +308,6 @@ When Claude Code compacts context:
 | Context management improvements | Proactive compaction strategy, context pressure monitoring, tighter two-tier memory integration |
 | Memory quality over time | Deduplicate, flag stale, and merge contradicted memories — prevents long-lived projects from accumulating noise |
 | Semantic search for recall | Embedding-based recall so vague or paraphrased queries find the right memories, not just exact keyword matches |
-| `/dako:doctor` health check | Single command to verify the full installation: MongoDB, hooks, both MCPs, short-term binary |
 | Auto registry-refresh on session start | If short-term memory shows recent command file changes, auto-run `/registry-refresh` at next session start |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi |

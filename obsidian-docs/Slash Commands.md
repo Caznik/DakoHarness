@@ -9,6 +9,30 @@ Custom slash commands live in `.claude/commands/`. An auto-generated index is at
 
 ---
 
+## /doctor
+
+**Usage:** `/doctor`  
+**File:** `commands/doctor.md`
+
+Verify the full DakoHarness installation in one shot. Checks all components and reports ✅/❌ with remediation steps.
+
+**Checks (in order):**
+1. `DAKO_HOME` — `~/.dako/config` exists and path is valid
+2. LTM server files — `server.js` and `node_modules/mongodb` present
+3. STM binary — platform binary exists at `$DAKO_HOME/bin/`
+4. `.env` — file exists and contains all 7 required fields
+5. MongoDB reachability — TCP connection test via temp Node.js script
+6. `.mcp.json` — exists in cwd with both MCP server entries
+7. Hooks — `UserPromptSubmit`, `Stop`, `PreCompact` configured; hook binary resolves
+8. LTM MCP (live) — `recall` tool call confirms MCP is responding
+9. STM MCP (live) — `get_recent_patterns` call confirms MCP is responding
+
+All checks run unconditionally. The summary table is always shown in full. Fixable failures (missing `.mcp.json`, incomplete `.env`) are offered as interactive remediations after the table.
+
+**When to use:** After installation, when an MCP is not connecting, or when hooks stop firing.
+
+---
+
 ## /recall
 
 **Usage:** `/recall <keywords>`  
