@@ -159,6 +159,19 @@ Call this at the start of a session to restore project context before working.`,
                     required: ["project", "title"]
                 }
             },
+            {
+                name: "list_memories",
+                description: "Returns all memories for a project, sorted oldest-first. Use for bulk operations like auditing, deduplication, and staleness checks. Each entry includes type, title, content, timestamp, age_days, and scope.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        project: { type: "string", description: "Project name" },
+                        type: { type: "string", enum: [...MEMORY_TYPES], description: "Filter by memory type (optional)" },
+                        limit: { type: "number", description: "Max results to return (default 200)", default: 200 }
+                    },
+                    required: ["project"]
+                }
+            },
             // ── Workitem archive ──────────────────────────────────────────────────
             {
                 name: "archive_workitem",
@@ -320,6 +333,27 @@ Call this at the start of a session to restore project context before working.`,
                 return { content: [{ type: "text", text: `No memory found matching title "${title}" in project "${project}".` }] };
             }
             return { content: [{ type: "text", text: `Deleted ${result.deletedCount} memory entry: "${title}"` }] };
+        }
+        // ── LIST MEMORIES ────────────────────────────────────────────────────────
+        if (name === "list_memories") {
+            const { project, type, limit = 200 } = args;
+            const filter = { project };
+            if (type)
+                filter.type = type;
+            const results = await db.collection("memories")
+                .find(filter)
+                .sort({ timestamp: 1 })
+                .limit(limit)
+                .toArray();
+            if (results.length === 0) {
+                return { content: [{ type: "text", text: `No memories found for project "${project}".` }] };
+            }
+            const now = Date.now();
+            const formatted = results.map(m => {
+                const age_days = Math.floor((now - new Date(m.timestamp).getTime()) / 86400000);
+                return JSON.stringify({ type: m.type, title: m.title, content: m.content, timestamp: m.timestamp, age_days, scope: m.scope });
+            }).join("\n");
+            return { content: [{ type: "text", text: `${results.length} memories for project "${project}":\n\n${formatted}` }] };
         }
         // ── ARCHIVE WORKITEM ─────────────────────────────────────────────────────
         if (name === "archive_workitem") {

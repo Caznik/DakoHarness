@@ -51,6 +51,24 @@ Save a structured context snapshot to short-term memory so work can be recovered
 
 ---
 
+## /memory-audit
+
+**Usage:** `/memory-audit`  
+**File:** `commands/memory-audit.md`
+
+Audit all long-term memories for the current project across three sequential passes. Agent proposes every change — nothing is deleted or modified without explicit user confirmation.
+
+**Passes (in order):**
+1. **Deduplication** — identifies near-duplicate memory pairs by type and content similarity; user chooses which to keep
+2. **Staleness** — flags memories older than 90 days; user keeps, updates, or deletes each
+3. **Contradictions** — identifies memories with conflicting claims on the same subject; user selects resolution
+
+After all three passes, prints a summary: "X duplicate(s) merged, Y stale resolved, Z contradiction(s) resolved."
+
+**When to use:** Periodically on long-lived projects (e.g. monthly) to keep long-term memory accurate and noise-free. Also run after a major refactor that may have invalidated existing decisions or conventions.
+
+---
+
 ## /recall
 
 **Usage:** `/recall <keywords>`  
