@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Platform wrapper for dako short-term memory binary.
+# Detects OS and execs the correct pre-compiled binary.
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OS="$(uname -s)"
+case "$OS" in
+  Linux*)  exec "$DIR/dako-stm-linux" "$@" ;;
+  Darwin*) exec "$DIR/dako-stm-darwin" "$@" ;;
+  *)       echo "dako-stm: unsupported OS: $OS" >&2; exit 1 ;;
+esac

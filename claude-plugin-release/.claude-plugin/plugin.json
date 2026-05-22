@@ -1,0 +1,12 @@
+{
+  "name": "dako",
+  "description": "Persistent memory, session logging, and structured development workflow for Claude Code. Provides two-tier memory (MongoDB long-term + SQLite short-term), automatic session transcripts, and the workitem workflow for traceable software development.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Caznik"
+  },
+  "homepage": "https://github.com/Caznik/DakoHarness",
+  "repository": "https://github.com/Caznik/DakoHarness",
+  "license": "MIT",
+  "keywords": ["memory", "workflow", "mongodb", "session-logging", "harness"]
+}
