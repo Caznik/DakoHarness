@@ -278,10 +278,10 @@ When Claude Code compacts context:
 |---|---|---|
 | 1 — Memory foundation | Done ✅ | Long-term MCP, short-term MCP, session logging, slash commands |
 | 2 — Memory hardening | Done ✅ | Compaction recovery, session boundaries, team scope, skill registry |
-| 3 — Development workflow | Done ✅ | Workitem workflow, 14 wi-* commands, artifact templates, workitem archive |
+| 3 — Development workflow | Done ✅ | Workitem workflow, 19 wi-* commands, artifact templates, workitem archive |
 | 4 — Skill registry | Done ✅ | Auto-generated index, /registry-refresh (delivered in Phase 2) |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
-| 6 — Marketplace | Planned | Submit dako plugin to the Claude Code Community Marketplace |
+| 6 — Marketplace | In progress 🔄 | Plugin folder ready, validation passes — pending community marketplace submission |
 | 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi |
 
 ### Backlog
@@ -296,6 +296,9 @@ When Claude Code compacts context:
 | `/dako:doctor` health check | Single command to verify the full installation: MongoDB, hooks, both MCPs, short-term binary |
 | Auto registry-refresh on session start | If short-term memory shows recent command file changes, auto-run `/registry-refresh` at next session start |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
+| Multi-agent adapters | Phase 7 — OpenCode, Pi |
+| Model routing | Route tasks to different models based on complexity |
+| Permission harness | Structured permission management layer |
 | MongoDB dashboard | Visual interface for browsing sessions and memories |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations |
 
