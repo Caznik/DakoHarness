@@ -295,7 +295,7 @@ When Claude Code compacts context:
 | 3 — Development workflow | Done ✅ | Workitem workflow, 14 wi-* commands, artifact templates, workitem archive |
 | 4 — Skill registry | Done ✅ | Auto-generated index, /registry-refresh (delivered in Phase 2) |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
-| 6 — Marketplace | In progress 🔄 | Plugin folder ready, validation passes — pending community marketplace submission |
+| 6 — Marketplace | Under review 🔄 | Submitted to community marketplace — awaiting review |
 | 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi |
 
 ### Backlog

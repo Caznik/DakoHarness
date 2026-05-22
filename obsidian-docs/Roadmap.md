@@ -14,7 +14,7 @@ created: 2026-05-20
 | 3 — Development workflow | Done ✅ | Workitem workflow, 14 wi-* commands, artifact templates, workitems archive |
 | 4 — Skill registry | Done ✅ | Delivered early in Phase 2 |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
-| 6 — Marketplace | In progress 🔄 | Plugin folder ready, validation passes — pending community marketplace submission |
+| 6 — Marketplace | Under review 🔄 | Submitted to community marketplace — awaiting review |
 | 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi, Codex CLI |
 
 ---
@@ -97,16 +97,18 @@ See [[Setup Guide]] for installation steps.
 
 ---
 
-## Phase 6 — Marketplace (Planned)
+## Phase 6 — Marketplace (Under review 🔄)
 
-Publish the `dako` plugin to the Claude Code Community Marketplace so users can install it with a single command instead of cloning the repo and using `--plugin-dir`.
+The `dako` plugin has been submitted to the Claude Code Community Marketplace. Once approved, users can install it with a single command instead of cloning the repo and using `--plugin-dir`.
 
-### What this involves
-- Research marketplace submission requirements and review process
-- Meet any packaging, metadata, or security requirements
-- Fix the `dako-logger` PATH issue permanently (marketplace installs add `bin/` to PATH automatically)
-- Submit and iterate through review
-- Post-publish: update Setup Guide with `claude plugin install dako` as the primary install path
+### Submitted
+- Plugin folder (`claude-plugin-release/`) validated with `claude plugin validate`
+- Submitted via `claude.ai/settings/plugins/submit`
+- Currently awaiting marketplace review
+
+### Post-approval
+- Update Setup Guide with `claude plugin install dako` as the primary install path
+- Announce to users
 
 ---
 
