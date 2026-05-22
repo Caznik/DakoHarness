@@ -33,7 +33,7 @@ DakoHarness/
 │   ├── registry-refresh.md     /dako:registry-refresh
 │   └── wi-*.md                 Workitem workflow (14 commands)
 ├── hooks/
-│   └── hooks.json              Plugin hooks (UserPromptSubmit, Stop, PreCompact)
+│   └── hooks.json              Plugin hooks (UserPromptSubmit, Stop)
 ├── bin/                        Cross-platform executables (auto-added to PATH by plugin system)
 │   ├── dako-logger / .bat      Session logging hook wrapper
 │   └── dako-stm*               Short-term MCP binaries (Windows, Linux, macOS)
@@ -181,13 +181,6 @@ Add to `.claude/settings.json` in your project (update paths):
         "command": "node /absolute/path/to/DakoHarness/mcps/mongodb-memory/logger.mjs Stop"
       }]
     }],
-    "PreCompact": [{
-      "matcher": "",
-      "hooks": [{
-        "type": "command",
-        "command": "node /absolute/path/to/DakoHarness/mcps/mongodb-memory/logger.mjs PreCompact"
-      }]
-    }],
     "SessionStart": []
   }
 }
@@ -249,6 +242,7 @@ Use `/promote-team` to elevate a project memory to team scope when it contains a
 |---|---|
 | `/dako:setup` | Full first-time project setup — MongoDB, .env, .mcp.json, CLAUDE.md injection |
 | `/dako:doctor` | Health check — verify MongoDB, .env, hooks, both MCPs, and STM binary in one shot |
+| `/dako:checkpoint` | Save a structured context snapshot to short-term memory for compaction recovery |
 | `/dako:recall <keywords>` | Search long-term memory for past decisions, conventions, and lessons |
 | `/dako:promote [keywords]` | Promote a short-term pattern to permanent long-term memory |
 | `/dako:promote-team [keywords]` | Promote a project memory to team scope (visible across all projects) |

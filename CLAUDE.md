@@ -9,7 +9,7 @@ mcps/
   mongodb-memory/   Long-term memory MCP (Node.js, MongoDB)
   short-term-memory/ Short-term pattern memory MCP (Go, SQLite, 7-day TTL)
 .claude/
-  settings.json     Hook configuration (UserPromptSubmit + Stop + PreCompact)
+  settings.json     Hook configuration (UserPromptSubmit + Stop)
   commands/         Custom slash commands (/recall, /promote, /promote-team, /session-end, /wi-*)
 workitem/           Workitem traceability artifacts (source_of_truth.md + phase artifacts per WI)
 .mcp.json           MCP server registrations
@@ -25,7 +25,7 @@ You have two memory systems. Use them actively — they are the core of what is 
 
 Start every session blank. Do **not** preload memory. Wait for the user's first task, then decide if memory is relevant.
 
-**After compaction:** Call `get_context` with `project: "DakoHarness"` once to check for compaction snapshots (tag `auto-cleanup`). If found, read to understand where work was interrupted, then delete with `forget`. Do not load all memories — only handle the snapshot.
+**After compaction:** Call `find_patterns` with `query: "context-snapshot"` and `project: "DakoHarness"` once. If a result is found, read it to understand where work was interrupted. No delete needed — STM TTL handles expiry automatically.
 
 ### During a Session — When to Search
 
@@ -51,6 +51,23 @@ Do not search memory for tasks that are clearly unrelated to past DakoHarness wo
 
 **Do not save** routine tool calls, exploratory attempts that were rejected, or information already derivable from the codebase.
 
+### Context Checkpointing
+
+Every 15 turns, call `remember_pattern` with the following fields to save a context snapshot to short-term memory:
+
+- `project`: `"DakoHarness"`
+- `agent`: `"claude-code"`
+- `type`: `"context-snapshot"`
+- `content`: structured as:
+  ```
+  Current task: <what is being worked on right now>
+  Key decisions this session: <decisions made but not yet saved to LTM, or "none">
+  Active workitem: <WI path and current phase, or "none">
+  ```
+- `reasoning`: `"Periodic context checkpoint"`
+
+The same snapshot structure is used by `/dako:checkpoint` for on-demand saves. If `remember_pattern` fails (STM MCP down), note the failure — do not silently continue without saving.
+
 ### Before Starting a Task
 
 If a task feels similar to something done recently, call `find_patterns` with relevant keywords before starting. Apply matching patterns unless the user indicates otherwise.
@@ -61,7 +78,7 @@ If a task feels similar to something done recently, call `find_patterns` with re
 
 | Situation | Tool | Memory tier |
 |---|---|---|
-| After compaction — check for snapshot | `get_context` | Long-term |
+| After compaction — check for snapshot | `find_patterns` (query: "context-snapshot") | Short-term |
 | User accepts an approach | `remember_pattern` | Short-term |
 | Permanent architectural decision | `remember` type: `decision` | Long-term |
 | Code convention established | `remember` type: `convention` | Long-term |

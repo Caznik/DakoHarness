@@ -22,17 +22,6 @@
         ]
       }
     ],
-    "PreCompact": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "dako-logger PreCompact"
-          }
-        ]
-      }
-    ],
     "SessionStart": []
   }
 }

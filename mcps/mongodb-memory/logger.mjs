@@ -12,6 +12,9 @@
  *   UserPromptSubmit  — logs the user's prompt as a "user" message
  *   Stop              — reads the last assistant turn from the transcript and logs it
  *
+ * Note: PreCompact is intentionally not handled. Compaction recovery uses STM snapshots
+ * saved by the agent via /dako:checkpoint or the periodic turn-count rule in CLAUDE.md.
+ *
  * Environment:
  *   MONGO_URI         — MongoDB connection string (falls back to docker-compose default)
  *   DAKO_PROJECT      — project name override (falls back to cwd basename)
@@ -165,45 +168,6 @@ try {
 
     const seq = await messages.countDocuments({ session_id });
     await messages.insertOne({ session_id, role: "assistant", content, seq, timestamp: new Date() });
-
-  } else if (event === "PreCompact") {
-    // Save last task context before compaction wipes conversation history.
-    // Short-term patterns survive (SQLite TTL), but in-progress reasoning is lost.
-    const transcriptPath = payload.transcript_path;
-    let taskContext = "(transcript unavailable)";
-
-    if (transcriptPath && existsSync(transcriptPath)) {
-      const lines = readFileSync(transcriptPath, "utf8").trim().split("\n");
-      const recentTurns = [];
-      for (let i = lines.length - 1; i >= 0 && recentTurns.length < 3; i--) {
-        try {
-          const entry = JSON.parse(lines[i]);
-          if (entry.type === "assistant" || entry.role === "assistant") {
-            const msg = entry.message ?? entry;
-            const raw = msg.content ?? "";
-            const text = typeof raw === "string"
-              ? raw
-              : Array.isArray(raw)
-                ? raw.filter(b => b.type === "text").map(b => b.text).join("\n")
-                : JSON.stringify(raw);
-            if (text.trim()) recentTurns.unshift(text.trim());
-          }
-        } catch {}
-      }
-      if (recentTurns.length > 0) taskContext = recentTurns.join("\n\n---\n\n");
-    }
-
-    const timestamp = new Date().toISOString();
-    await db.collection("memories").insertOne({
-      project: projectName,
-      agent: agentName,
-      type: "context",
-      title: `Compaction snapshot — ${timestamp}`,
-      content: `Context compacted at ${timestamp}. Session: ${session_id}.\n\nLast task context before compaction:\n\n${taskContext}`,
-      tags: ["compaction", "auto-cleanup"],
-      session_id,
-      timestamp: new Date(),
-    });
 
   } else {
     process.stderr.write(`Unknown event: ${event}\n`);

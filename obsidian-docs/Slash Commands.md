@@ -33,6 +33,24 @@ All checks run unconditionally. The summary table is always shown in full. Fixab
 
 ---
 
+## /checkpoint
+
+**Usage:** `/checkpoint`  
+**File:** `commands/checkpoint.md`
+
+Save a structured context snapshot to short-term memory so work can be recovered after context compaction.
+
+**What it saves:**
+- Current task description
+- Key decisions made this session not yet in long-term memory
+- Active workitem path and phase (if any)
+
+**When to use:** At any point in a long session before closing, or when context is getting large. Also triggered automatically every 15 turns by the CLAUDE.md protocol.
+
+**Recovery:** At the start of a session after compaction, the agent calls `find_patterns(query: "context-snapshot")` to check for a recent snapshot and restore context from it. Snapshots expire automatically after 7 days via STM TTL — no manual cleanup needed.
+
+---
+
 ## /recall
 
 **Usage:** `/recall <keywords>`  
