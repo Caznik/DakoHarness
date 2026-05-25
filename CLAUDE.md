@@ -25,6 +25,8 @@ You have two memory systems. Use them actively — they are the core of what is 
 
 Start every session blank. Do **not** preload memory. Wait for the user's first task, then decide if memory is relevant.
 
+**Registry freshness:** On session start, before reading the user's first task, check whether `.claude/skill-registry.md` is stale relative to `.claude/commands/`. The registry is stale if any `.claude/commands/*.md` file has an mtime newer than `.claude/skill-registry.md`, OR if `.claude/skill-registry.md` does not exist. If stale, invoke `/registry-refresh` and emit one line in the existing format: `Registry refreshed — N skills indexed.` If fresh, do nothing — no log line, no tool call. If `.claude/commands/` does not exist (e.g. plugin-only installs where commands live elsewhere), skip the check silently.
+
 **After compaction:** Call `find_patterns` with `query: "context-snapshot"` and `project: "DakoHarness"` once. If a result is found, read it to understand where work was interrupted. No delete needed — STM TTL handles expiry automatically.
 
 ### During a Session — When to Search

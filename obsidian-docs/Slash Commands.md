@@ -150,7 +150,7 @@ Regenerate `.claude/skill-registry.md` by scanning all command files.
 2. Reads `name` and `description` from each file's YAML frontmatter
 3. Writes the registry table with a "When to use" column
 
-**When to use:** After adding, removing, or renaming a command file.
+**When to use:** After adding, removing, or renaming a command file. Also invoked automatically at session start when any `.claude/commands/*.md` file is newer than `.claude/skill-registry.md` (or the registry is missing) — see CLAUDE.md `## Memory Protocol` → `### Session Start` → "Registry freshness".
 
 > [!NOTE]
 > `.claude/skill-registry.md` is gitignored — it is always generated locally from the command files.

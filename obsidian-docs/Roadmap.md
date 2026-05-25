@@ -129,7 +129,6 @@ Per-agent adapter layer for:
 | Context management improvements | Broaden compaction recovery into a proactive strategy: smarter pre-compaction snapshots, context pressure monitoring, and tighter integration between the two-tier memory system and in-session context usage. |
 | Memory quality over time | Memories only accumulate — no signal for stale, contradicted, or duplicated entries. Add a review/consolidation process: deduplicate across sessions, flag memories superseded by newer decisions, and merge contradictions. Matters most after months of active use. |
 | Semantic search for recall | `recall` uses keyword/text search. Embedding-based semantic search would make long-term memory useful for vague or paraphrased queries (e.g. "how should I structure the data layer?" finding "always use the repository pattern"). |
-| Auto registry-refresh on session start | If short-term memory shows recent command file changes, auto-run `/registry-refresh` at next session start |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations |

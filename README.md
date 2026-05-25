@@ -301,7 +301,6 @@ When Claude Code compacts context:
 | Sub-agent delegation for implementation | Delegate coding tasks to sub-agents to keep the main context clean and enable parallel work across plan steps |
 | Pluggable long-term memory backend | Abstract the storage layer so alternatives to MongoDB (PostgreSQL, SQLite, hosted) are supported; MongoDB remains default |
 | Local embedding model for recall | Optional local embedding backend (e.g. Transformers.js, sentence-transformers) for true semantic search beyond agent-side query expansion |
-| Auto registry-refresh on session start | If short-term memory shows recent command file changes, auto-run `/registry-refresh` at next session start |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi |
 | Model routing | Route tasks to different models based on complexity |
