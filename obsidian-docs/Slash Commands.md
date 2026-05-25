@@ -74,12 +74,16 @@ After all three passes, prints a summary: "X duplicate(s) merged, Y stale resolv
 **Usage:** `/recall <keywords>`  
 **File:** `.claude/commands/recall.md`
 
-Search long-term memory for past decisions, conventions, bugs, and lessons.
+Search long-term memory with query expansion — the agent generates paraphrased variants and merges results across all of them so vague or rephrased queries still surface the right memories.
 
 **Steps:**
-1. Calls `recall` with the given keywords against the current project
-2. Groups results by memory type (DECISION, CONVENTION, BUG, CONTEXT, LESSON)
-3. Reports plainly if nothing is found — never invents context
+1. Generates up to 5 query variants (original + 1-4 paraphrases) from the user's input
+2. Runs `recall` once per variant against the current project
+3. Merges results across variants — dedupes by `[TYPE] title`, ranks by number of variants where each memory appeared (tie-break by best rank)
+4. Groups the top results by memory type (DECISION, CONVENTION, BUG, CONTEXT, LESSON)
+5. Reports plainly if nothing is found — never invents context
+
+The protocol is defined in `CLAUDE.md` under "Memory Query Expansion" — agent-initiated `recall` and `find_patterns` calls follow the same approach.
 
 **When to use:** Before starting work that may have relevant prior decisions or known pitfalls.
 

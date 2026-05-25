@@ -97,6 +97,29 @@ If a task feels similar to something done recently, call `find_patterns` with re
 
 ---
 
+## Memory Query Expansion
+
+Both `recall` (LTM) and `find_patterns` (STM) are keyword-based — exact phrasing matters. To make vague or paraphrased queries return the right results, expand the query agent-side before calling either tool. This protocol applies to **any** memory search you initiate, not just the `/recall` slash command.
+
+### When to expand
+
+Any time the user's intent could be expressed in multiple ways. Skip expansion for short, unambiguous keyword searches (e.g. a specific function or file name).
+
+### How to expand
+
+1. Generate up to **5 total queries** — the original plus 1-4 paraphrases. A useful paraphrase varies the surface form (synonyms, alternative framings, related concepts) while preserving intent. Don't waste a variant on a trivial morphological change (singular/plural alone).
+2. Call the target MCP tool **once per variant** with the same `project` and `limit`.
+3. Merge the ranked result lists:
+   - **LTM (`recall`)**: dedup by `[TYPE] title` (the prefix the MCP emits, e.g. `[DECISION] Use MongoDB`). Score = number of variants where the memory appeared. Tie-break by best (lowest) rank across those variants.
+   - **STM (`find_patterns`)**: dedup by content fingerprint — first 80 characters of `content`, lowercased, whitespace-collapsed. Same rank-based scoring.
+4. Sort merged results by score desc, then best rank asc. Present the top 5-10.
+
+### Fallback
+
+If a variant errors, skip it — the remaining variants still produce results. If every variant returns nothing, the search has genuinely missed; do not invent context.
+
+---
+
 ## Skill Registry
 
 A list of available slash commands is in `.claude/skill-registry.md`. Consult it when a user's request sounds like a workflow task that might match a command (e.g. "search memory", "end the session", "save this pattern"). Run `/registry-refresh` after adding or removing a command file.

@@ -244,7 +244,7 @@ Use `/promote-team` to elevate a project memory to team scope when it contains a
 | `/dako:doctor` | Health check — verify MongoDB, .env, hooks, both MCPs, and STM binary in one shot |
 | `/dako:checkpoint` | Save a structured context snapshot to short-term memory for compaction recovery |
 | `/dako:memory-audit` | Audit long-term memories — deduplicate, flag stale (90+ days), resolve contradictions |
-| `/dako:recall <keywords>` | Search long-term memory for past decisions, conventions, and lessons |
+| `/dako:recall <keywords>` | Search long-term memory with query expansion — agent generates paraphrases and merges results across variants |
 | `/dako:promote [keywords]` | Promote a short-term pattern to permanent long-term memory |
 | `/dako:promote-team [keywords]` | Promote a project memory to team scope (visible across all projects) |
 | `/dako:session-end` | Review patterns from this session, promote durable ones, save in-progress context |
@@ -300,7 +300,7 @@ When Claude Code compacts context:
 |---|---|
 | Sub-agent delegation for implementation | Delegate coding tasks to sub-agents to keep the main context clean and enable parallel work across plan steps |
 | Pluggable long-term memory backend | Abstract the storage layer so alternatives to MongoDB (PostgreSQL, SQLite, hosted) are supported; MongoDB remains default |
-| Semantic search for recall | Embedding-based recall so vague or paraphrased queries find the right memories, not just exact keyword matches |
+| Local embedding model for recall | Optional local embedding backend (e.g. Transformers.js, sentence-transformers) for true semantic search beyond agent-side query expansion |
 | Auto registry-refresh on session start | If short-term memory shows recent command file changes, auto-run `/registry-refresh` at next session start |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi |
