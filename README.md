@@ -302,7 +302,6 @@ When Claude Code compacts context:
 
 | Item | Description |
 |---|---|
-| Sub-agent delegation for implementation | Delegate coding tasks to sub-agents to keep the main context clean and enable parallel work across plan steps |
 | Local embedding model for recall | Optional local embedding backend (e.g. Transformers.js, sentence-transformers) for true semantic search beyond agent-side query expansion |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi |
@@ -310,6 +309,7 @@ When Claude Code compacts context:
 | Permission harness | Structured permission management layer |
 | MongoDB dashboard | Visual interface for browsing sessions and memories |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations |
+| SQLite → MongoDB sync | Migrate long-term memory data from a SQLite backend to MongoDB (`dako migrate --from sqlite --to mongodb`). Field mapping table in `storage/Storage.ts` is the spec; no data reconstruction needed (AC-10 forward-compat). |
 
 ---
 
