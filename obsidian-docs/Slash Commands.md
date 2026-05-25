@@ -183,7 +183,7 @@ Regenerate `.claude/skill-registry.md` by scanning all command files.
 | `/wi-analyze <path>` | 2 | Requirements interview + acceptance criteria sign-off |
 | `/wi-propose <path>` | 3 | Generate approaches, surface trade-offs, record selection |
 | `/wi-plan <path>` | 4 | Explore codebase + produce sequenced plan tied to ACs |
-| `/wi-implement <path>` | 5 | Architecture → TDD coding → QA loop → regression |
+| `/wi-implement <path>` | 5 | Dispatches the implement phase to the [[#Sub-agents\|wi-implementer]] sub-agent (architecture → TDD coding → QA loop with AC Pre-Check → regression) |
 | `/wi-review <path>` | 6 | Verify every AC and plan step → produce verdict |
 | `/wi-document <path>` | 7 | Update project docs + write workitem documentation record |
 | `/wi-repo <path>` | 8 | Suggest commit message — never touches git without approval |
@@ -204,6 +204,34 @@ Regenerate `.claude/skill-registry.md` by scanning all command files.
    ```
 2. Write the steps the agent should follow in the file body
 3. Run `/registry-refresh` to update the index
+
+> Mirror the new file to `commands/` and `claude-plugin-release/commands/` to keep the three-location skill convention intact.
+
+---
+
+## Sub-agents
+
+Some skills dispatch heavy work to a custom Claude Code sub-agent rather than running inline in the main conversation. Sub-agents run in their own context window and return a terse status to main — useful for phases that produce many file edits or long exploration trails (which would otherwise eat main's context and trigger compaction).
+
+**Where they live.** Same three-location convention as skills:
+
+- `.claude/agents/<name>.md` — read by Claude Code in dev mode
+- `agents/<name>.md` — repo-root mirror (parallel to standalone `commands/`)
+- `claude-plugin-release/agents/<name>.md` — shipped with the plugin distribution
+
+All three files must stay byte-identical, same as the skill mirror rule.
+
+**Format.** YAML frontmatter (`name`, `description`, optional `tools` list to restrict the agent's toolset) followed by the agent's system prompt as markdown.
+
+**Invocation.** Dispatched via the `Agent` tool with `subagent_type: <name>`. The dispatching skill provides the prompt; the agent's system prompt (the file body) carries the protocol.
+
+> **Session restart required after adding a new sub-agent.** Claude Code discovers agents at session start. After adding or modifying a file in `.claude/agents/`, restart your Claude Code session before the new agent becomes invokable. Existing sessions will see `Agent type '<name>' not found` until restarted.
+
+**Current sub-agents:**
+
+| Name | Used by | Purpose |
+|---|---|---|
+| `wi-implementer` | `/wi-implement` | Owns the full implement phase (architecture review, TDD coding, QA loop with AC Pre-Check, regression). Returns one of `done -> <path>` (with 3–5 highlight bullets) / `blocked -> <reason>` / `replan-requested -> <discovery>`. |
 
 ---
 

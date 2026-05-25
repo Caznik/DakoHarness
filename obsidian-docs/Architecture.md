@@ -27,11 +27,13 @@ DakoHarness/
 │   ├── wi-analyze.md
 │   ├── wi-propose.md
 │   ├── wi-plan.md
-│   ├── wi-implement.md
+│   ├── wi-implement.md         (thin dispatcher → dispatches to wi-implementer sub-agent)
 │   ├── wi-review.md
 │   ├── wi-document.md
 │   ├── wi-repo.md
 │   └── wi-archive.md
+├── agents/                     Custom Claude Code sub-agents (mirrored to .claude/agents/ and claude-plugin-release/agents/)
+│   └── wi-implementer.md       Owns the full implement phase — invoked by /wi-implement
 ├── hooks/
 │   └── hooks.json              Plugin hook configuration (UserPromptSubmit, Stop, PreCompact)
 ├── bin/                        Auto-added to PATH by plugin system

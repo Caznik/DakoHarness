@@ -4,3 +4,4 @@ node_modules/
 .claude/skill-registry.md
 .dako/
 mcps/short-term-memory/short-term-memory.exe
+old-agents/

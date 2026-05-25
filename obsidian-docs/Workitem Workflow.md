@@ -176,7 +176,7 @@ Completed workitems are stored in MongoDB `workitems` collection:
 | `/wi-analyze <wi-path>` | Analyze only |
 | `/wi-propose <wi-path>` | Propose only |
 | `/wi-plan <wi-path>` | Plan only |
-| `/wi-implement <wi-path>` | Full implementation sub-phases |
+| `/wi-implement <wi-path>` | Dispatches the implement phase to the `wi-implementer` sub-agent (architecture → TDD coding → QA loop with AC Pre-Check → regression) |
 | `/wi-review <wi-path>` | Review only |
 | `/wi-document <wi-path>` | Documentation only |
 | `/wi-repo <wi-path>` | Repo actions only |
