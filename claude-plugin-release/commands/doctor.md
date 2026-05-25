@@ -1,6 +1,6 @@
 ---
 name: doctor
-description: Verify the full DakoHarness installation — checks MongoDB, .env, hooks, both MCPs, and binaries in one shot. Reports ✅/❌ per component with remediation steps for failures.
+description: Verify the full DakoHarness installation — checks storage backend, .env, hooks, both MCPs, and binaries in one shot. Reports ✅/❌ per component with remediation steps for failures.
 ---
 
 ## When to use
@@ -34,16 +34,22 @@ Accumulate results throughout all steps. Do not output per-step results as you g
   - ✅: record `STM binary | ✅`
   - ❌: record `STM binary | ❌ | Binary missing — run git pull in $DAKO_HOME or rebuild from mcps/short-term-memory/main.go`
 
-### 4. Project — .env
+### 4. Project — .env and backend detection
 
 - Check `$DAKO_HOME/mcps/mongodb-memory/.env` exists.
-  - ❌ if missing: record `.env (exists) | ❌ | File not found — run /dako:setup`. Skip Step 5.
-- If present: read it and verify all 7 required fields are present and non-empty:
-  `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_DB`, `MONGO_URI`, `DAKO_AGENT`
-  - All present: record `.env (exists) | ✅` and `.env (fields) | ✅`
+  - ❌ if missing: record `.env (exists) | ❌ | File not found — run /dako:setup`. Record `.env (fields) | ⚠️ skipped | .env missing`. Set backend = `mongodb` (default). Skip Step 5.
+- If present: read `DAKO_STORAGE_BACKEND` from it. If absent, default to `mongodb`.
+  - Record `Backend selected | ✅ | <value>` (e.g. `mongodb` or `sqlite`).
+
+  **mongodb backend — required fields:** `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_DB`, `MONGO_URI`, `DAKO_AGENT`
+  **sqlite backend — required fields:** `DAKO_STORAGE_BACKEND`, `DAKO_SQLITE_PATH`, `DAKO_AGENT`
+
+  - All required fields present and non-empty: record `.env (exists) | ✅` and `.env (fields) | ✅`
   - Any missing: record `.env (exists) | ✅` and `.env (fields) | ❌ | Missing: <list of missing fields> — run /dako:setup or edit .env manually`
 
-### 5. Project — MongoDB reachability
+### 5. Backend health check
+
+#### If backend = mongodb
 
 - Read `MONGO_HOST`, `MONGO_PORT`, `MONGO_URI` from `.env`.
 - If `node_modules/mongodb` is missing (from Step 2): record `MongoDB reachable | ⚠️ skipped | node_modules missing — install first`.
@@ -59,6 +65,23 @@ Accumulate results throughout all steps. Do not output per-step results as you g
   - Run with `node`, then delete the file.
   - Exit 0: record `MongoDB reachable | ✅`
   - Exit 1: record `MongoDB reachable | ❌ | Cannot reach $MONGO_HOST:$MONGO_PORT — run: docker start mcp_mongodb`
+- Record `SQLite DB writable | ⚠️ skipped | backend is mongodb`
+- Record `FTS5 available | ⚠️ skipped | backend is mongodb`
+- Record `SQLite write probe | ⚠️ skipped | backend is mongodb`
+
+#### If backend = sqlite
+
+- Record `MongoDB reachable | ⚠️ skipped | backend is sqlite`
+- Read `DAKO_SQLITE_PATH` from `.env` (default `.dako/memory.db`).
+- **SQLite DB writable:** attempt `mkdirSync` on the parent directory then open a `better-sqlite3` instance at the path.
+  - Success: record `SQLite DB writable | ✅ | <path>`
+  - Failure: record `SQLite DB writable | ❌ | Cannot open <path> — check permissions or DAKO_SQLITE_PATH`
+- **FTS5 available:** if DB opened successfully, run `PRAGMA compile_options` and check for `ENABLE_FTS5`.
+  - Found: record `FTS5 available | ✅`
+  - Not found: record `FTS5 available | ❌ | SQLite build does not include FTS5 — install a standard SQLite distribution`
+- **SQLite write probe:** if DB opened successfully, run `CREATE TABLE IF NOT EXISTS _doctor_probe (x TEXT); INSERT INTO _doctor_probe VALUES ('ok'); SELECT x FROM _doctor_probe; DROP TABLE _doctor_probe;`
+  - Success: record `SQLite write probe | ✅`
+  - Failure: record `SQLite write probe | ❌ | Write test failed — check disk space and file permissions`
 
 ### 6. Project — .mcp.json
 
@@ -94,7 +117,7 @@ Then check that the hook command executable resolves:
   - `query`: `"doctor-ping"`
   - `limit`: 1
 - ✅ if the tool responds (any result, including empty): record `LTM MCP (live) | ✅`
-- ❌ if the call fails or MCP is not connected: record `LTM MCP (live) | ❌ | MCP not responding — restart Claude Code; verify .mcp.json LTM entry and MongoDB status`
+- ❌ if the call fails or MCP is not connected: record `LTM MCP (live) | ❌ | MCP not responding — restart Claude Code; verify .mcp.json LTM entry and backend status`
 
 ### 9. Live — STM MCP ping
 
@@ -115,9 +138,13 @@ Output all accumulated results:
 | LTM server.js | ✅ / ❌ | |
 | node_modules/mongodb | ✅ / ❌ | |
 | STM binary | ✅ / ❌ | |
+| Backend selected | ✅ | mongodb or sqlite |
 | .env (exists) | ✅ / ❌ | |
 | .env (fields) | ✅ / ❌ | missing fields if any |
 | MongoDB reachable | ✅ / ❌ / ⚠️ | |
+| SQLite DB writable | ✅ / ❌ / ⚠️ | |
+| FTS5 available | ✅ / ❌ / ⚠️ | |
+| SQLite write probe | ✅ / ❌ / ⚠️ | |
 | .mcp.json | ✅ / ❌ | |
 | Hooks configured | ✅ / ❌ | missing events if any |
 | Hook command resolves | ✅ / ❌ | |

@@ -39,9 +39,13 @@ DakoHarness/
 │   └── dako-stm*               Short-term MCP binaries (Windows, Linux, macOS)
 ├── mcps/
 │   ├── mongodb-memory/         Long-term memory MCP (Node.js + TypeScript)
-│   │   ├── server.ts/js        MCP server — remember, recall, get_context,
-│   │   │                       promote_to_team, forget, archive_workitem, …
-│   │   └── logger.mjs          Session logging hook companion
+│   │   ├── server.ts/js        MCP server — dispatches all tool calls through storage abstraction
+│   │   ├── logger.mjs          Session logging hook companion (backend-agnostic)
+│   │   └── storage/            Pluggable storage layer
+│   │       ├── Storage.ts/js   Domain-method interface
+│   │       ├── MongoStorage.*  MongoDB adapter (default)
+│   │       ├── SqliteStorage.* SQLite adapter (FTS5, better-sqlite3)
+│   │       └── factory.*       Backend selection (DAKO_STORAGE_BACKEND)
 │   └── short-term-memory/      Short-term memory MCP source (Go + SQLite)
 │       └── main.go             MCP server — remember_pattern, find_patterns,
 │                               get_recent_patterns
@@ -55,7 +59,7 @@ DakoHarness/
 
 | Tier | Storage | Scope | TTL | When to use |
 |---|---|---|---|---|
-| Long-term | MongoDB | Project or Team | Permanent | Architectural decisions, conventions, bugs, lessons |
+| Long-term | MongoDB or SQLite (pluggable via `DAKO_STORAGE_BACKEND`) | Project or Team | Permanent | Architectural decisions, conventions, bugs, lessons |
 | Short-term | SQLite (FTS5) | Project, machine-local | 7 days | Accepted approaches, recent patterns |
 
 ---
@@ -299,7 +303,6 @@ When Claude Code compacts context:
 | Item | Description |
 |---|---|
 | Sub-agent delegation for implementation | Delegate coding tasks to sub-agents to keep the main context clean and enable parallel work across plan steps |
-| Pluggable long-term memory backend | Abstract the storage layer so alternatives to MongoDB (PostgreSQL, SQLite, hosted) are supported; MongoDB remains default |
 | Local embedding model for recall | Optional local embedding backend (e.g. Transformers.js, sentence-transformers) for true semantic search beyond agent-side query expansion |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi |

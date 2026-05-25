@@ -1,26 +1,25 @@
+// AUTO-MIRROR of server.ts — keep in sync (no build step yet)
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { MongoClient } from "mongodb";
-import { randomUUID } from "crypto";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import * as dotenv from "dotenv";
+import { getStorage } from "./storage/factory.js";
+
 dotenv.config({ path: join(dirname(fileURLToPath(import.meta.url)), ".env") });
-const MONGO_URI = process.env.MONGO_URI || "mongodb://dako:harness@localhost:27017/agent_memory?authSource=admin";
-const DB_NAME = process.env.MONGO_DB || "agent_memory";
-const client = new MongoClient(MONGO_URI);
+
 const MEMORY_TYPES = ["decision", "convention", "bug", "context", "lesson"];
 const MEMORY_SCOPES = ["project", "team"];
+
 async function main() {
-    await client.connect();
-    console.error("Connected to MongoDB");
-    const db = client.db(DB_NAME);
-    await db.collection("memories").createIndex({ title: "text", content: "text" }, { name: "memories_text_search" });
-    await db.collection("memories").createIndex({ scope: 1 });
-    await db.collection("workitems").createIndex({ project: 1, wi_path: 1 });
-    await db.collection("workitems").createIndex({ documentation: "text" }, { name: "workitems_text_search" });
+    // Backend is selected by DAKO_STORAGE_BACKEND (default: mongodb).
+    // MongoStorage.create() opens the connection and creates indexes.
+    // An invalid backend value throws here and exits non-zero (AC-4).
+    const storage = await getStorage();
+
     const server = new Server({ name: "dako-long-term-memory", version: "2.0.0" }, { capabilities: { tools: {} } });
+
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
         tools: [
             // ── Long-term memory ──────────────────────────────────────────────────
@@ -190,187 +189,31 @@ Call this at the start of a session to restore project context before working.`,
             }
         ]
     }));
+
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
-        const db = client.db(DB_NAME);
         const { name, arguments: args } = request.params;
-        // ── REMEMBER ─────────────────────────────────────────────────────────────
-        if (name === "remember") {
-            const { project, agent, type, title, content, tags = [], session_id, scope = "project" } = args;
-            const memories = db.collection("memories");
-            await memories.insertOne({
-                project, agent, type, title, content, tags, scope,
-                ...(session_id ? { session_id } : {}),
-                timestamp: new Date()
-            });
-            return { content: [{ type: "text", text: `Remembered [${type}]: "${title}"` }] };
-        }
-        // ── RECALL ───────────────────────────────────────────────────────────────
-        if (name === "recall") {
-            const { project, query, type, limit = 10, include_team = false } = args;
-            const memories = db.collection("memories");
-            const filter = { $text: { $search: query } };
-            if (include_team) {
-                filter.$or = [{ project }, { scope: "team" }];
-            }
-            else {
-                filter.project = project;
-            }
-            if (type)
-                filter.type = type;
-            const results = await memories
-                .find(filter, { projection: { score: { $meta: "textScore" } } })
-                .sort({ score: { $meta: "textScore" } })
-                .limit(limit)
-                .toArray();
-            if (results.length === 0) {
-                return { content: [{ type: "text", text: `No memories found for "${query}" in project "${project}".` }] };
-            }
-            const formatted = results.map(m => `[${m.type.toUpperCase()}] ${m.title}\n${m.content}${m.tags?.length ? `\nTags: ${m.tags.join(", ")}` : ""}`).join("\n\n---\n\n");
-            return { content: [{ type: "text", text: `${results.length} result(s) for "${query}":\n\n${formatted}` }] };
-        }
-        // ── GET CONTEXT ──────────────────────────────────────────────────────────
-        if (name === "get_context") {
-            const { project, type } = args;
-            const memories = db.collection("memories");
-            const filter = { project };
-            if (type)
-                filter.type = type;
-            const all = await memories.find(filter).sort({ type: 1, timestamp: -1 }).toArray();
-            if (all.length === 0) {
-                return { content: [{ type: "text", text: `No memories stored for project "${project}" yet.` }] };
-            }
-            // Group by type
-            const grouped = {};
-            for (const m of all) {
-                if (!grouped[m.type])
-                    grouped[m.type] = [];
-                grouped[m.type].push(m);
-            }
-            const sections = Object.entries(grouped).map(([t, items]) => {
-                const entries = items.map(m => `  • ${m.title}\n    ${m.content}`).join("\n");
-                return `## ${t.toUpperCase()}S\n${entries}`;
-            });
-            return { content: [{ type: "text", text: `Project context for "${project}":\n\n${sections.join("\n\n")}` }] };
-        }
-        // ── GET SYSTEM STATUS ────────────────────────────────────────────────────
-        if (name === "get_system_status") {
-            const memories = db.collection("memories");
-            const sessions = db.collection("sessions");
-            const messages = db.collection("messages");
-            const [memCount, sessionCount, msgCount, projects] = await Promise.all([
-                memories.countDocuments(),
-                sessions.countDocuments(),
-                messages.countDocuments(),
-                memories.distinct("project")
-            ]);
-            const text = [
-                `Status: HEALTHY`,
-                `Memories: ${memCount} across ${projects.length} project(s) — ${projects.join(", ") || "none"}`,
-                `Sessions: ${sessionCount} | Messages logged: ${msgCount}`
-            ].join("\n");
-            return { content: [{ type: "text", text: text }] };
-        }
-        // ── START SESSION ────────────────────────────────────────────────────────
-        if (name === "start_session") {
-            const { project, agent, cwd = "" } = args;
-            const session_id = randomUUID();
-            await db.collection("sessions").insertOne({ session_id, project, agent, cwd, started_at: new Date() });
-            return { content: [{ type: "text", text: JSON.stringify({ session_id }) }] };
-        }
-        // ── LOG MESSAGE ──────────────────────────────────────────────────────────
-        if (name === "log_message") {
-            const { session_id, role, content } = args;
-            const messages = db.collection("messages");
-            const seq = await messages.countDocuments({ session_id });
-            await messages.insertOne({ session_id, role, content, seq, timestamp: new Date() });
-            return { content: [{ type: "text", text: `Logged [${role}] seq:${seq}` }] };
-        }
-        // ── GET SESSION ──────────────────────────────────────────────────────────
-        if (name === "get_session") {
-            const { session_id } = args;
-            const session = await db.collection("sessions").findOne({ session_id });
-            if (!session) {
-                return { content: [{ type: "text", text: `No session found: "${session_id}"` }] };
-            }
-            const msgs = await db.collection("messages").find({ session_id }).sort({ seq: 1 }).toArray();
-            const transcript = msgs.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join("\n\n");
-            const header = `Session: ${session_id}\nProject: ${session.project} | Agent: ${session.agent} | Started: ${session.started_at.toISOString()}\nMessages: ${msgs.length}\n\n`;
-            return { content: [{ type: "text", text: header + (transcript || "(no messages yet)") }] };
-        }
-        // ── LIST SESSIONS ────────────────────────────────────────────────────────
-        if (name === "list_sessions") {
-            const { project, agent, limit = 10 } = args;
-            const query = { project };
-            if (agent)
-                query.agent = agent;
-            const results = await db.collection("sessions").find(query).sort({ started_at: -1 }).limit(limit).toArray();
-            if (results.length === 0) {
-                return { content: [{ type: "text", text: `No sessions found for project "${project}".` }] };
-            }
-            const formatted = results.map(s => `[${s.started_at.toISOString()}] ${s.session_id} | ${s.agent}${s.cwd ? ` | ${s.cwd}` : ""}`).join("\n");
-            return { content: [{ type: "text", text: `Sessions for "${project}":\n\n${formatted}` }] };
-        }
-        // ── PROMOTE TO TEAM ──────────────────────────────────────────────────────
-        if (name === "promote_to_team") {
-            const { project, title, type } = args;
-            const memFilter = { project, title };
-            if (type)
-                memFilter.type = type;
-            const result = await db.collection("memories").updateOne(memFilter, { $set: { scope: "team" } });
-            if (result.matchedCount === 0) {
-                return { content: [{ type: "text", text: `No memory found matching title "${title}" in project "${project}".` }] };
-            }
-            return { content: [{ type: "text", text: `Promoted to team scope: "${title}"` }] };
-        }
-        // ── FORGET ───────────────────────────────────────────────────────────────
-        if (name === "forget") {
-            const { project, title, type } = args;
-            const filter = { project, title };
-            if (type)
-                filter.type = type;
-            const result = await db.collection("memories").deleteMany(filter);
-            if (result.deletedCount === 0) {
-                return { content: [{ type: "text", text: `No memory found matching title "${title}" in project "${project}".` }] };
-            }
-            return { content: [{ type: "text", text: `Deleted ${result.deletedCount} memory entry: "${title}"` }] };
-        }
-        // ── LIST MEMORIES ────────────────────────────────────────────────────────
-        if (name === "list_memories") {
-            const { project, type, limit = 200 } = args;
-            const filter = { project };
-            if (type)
-                filter.type = type;
-            const results = await db.collection("memories")
-                .find(filter)
-                .sort({ timestamp: 1 })
-                .limit(limit)
-                .toArray();
-            if (results.length === 0) {
-                return { content: [{ type: "text", text: `No memories found for project "${project}".` }] };
-            }
-            const now = Date.now();
-            const formatted = results.map(m => {
-                const age_days = Math.floor((now - new Date(m.timestamp).getTime()) / 86400000);
-                return JSON.stringify({ type: m.type, title: m.title, content: m.content, timestamp: m.timestamp, age_days, scope: m.scope });
-            }).join("\n");
-            return { content: [{ type: "text", text: `${results.length} memories for project "${project}":\n\n${formatted}` }] };
-        }
-        // ── ARCHIVE WORKITEM ─────────────────────────────────────────────────────
-        if (name === "archive_workitem") {
-            const { wi_path, project, username, git_commit, documentation } = args;
-            await db.collection("workitems").insertOne({
-                wi_path, project,
-                ...(username ? { username } : {}),
-                ...(git_commit ? { git_commit } : {}),
-                documentation,
-                archived_at: new Date()
-            });
-            return { content: [{ type: "text", text: `Workitem archived: ${wi_path} (project: ${project})` }] };
-        }
+
+        if (name === "remember")          return storage.remember(args);
+        if (name === "recall")            return storage.recall(args);
+        if (name === "get_context")       return storage.getContext(args);
+        if (name === "get_system_status") return storage.getSystemStatus();
+        if (name === "start_session")     return storage.startSession(args);
+        if (name === "log_message")       return storage.logMessage(args);
+        if (name === "get_session")       return storage.getSession(args);
+        if (name === "list_sessions")     return storage.listSessions(args);
+        if (name === "promote_to_team")   return storage.promoteToTeam(args);
+        if (name === "forget")            return storage.forget(args);
+        if (name === "list_memories")     return storage.listMemories(args);
+        if (name === "archive_workitem")  return storage.archiveWorkitem(args);
+
         throw new Error(`Unknown tool: ${name}`);
     });
+
     const transport = new StdioServerTransport();
     await server.connect(transport);
 }
-main().catch(console.error);
-//# sourceMappingURL=server.js.map
+
+main().catch((err) => {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+});

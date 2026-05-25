@@ -47,9 +47,13 @@ DakoHarness/
 │   └── dako-stm-darwin         Short-term MCP binary (macOS amd64)
 ├── mcps/
 │   ├── mongodb-memory/         Long-term memory MCP (Node.js + TypeScript)
-│   │   ├── server.ts           MCP server (remember, recall, get_context, promote_to_team,
-│   │   │                         forget, archive_workitem, …)
-│   │   └── logger.mjs          Dev setup copy (standalone use with .claude/settings.json)
+│   │   ├── server.ts           MCP server — dispatches all tool calls through storage abstraction
+│   │   ├── logger.mjs          Hook logger — routes session writes through storage abstraction
+│   │   └── storage/            Storage abstraction layer (backend-agnostic)
+│   │       ├── Storage.ts/js   Domain-method interface (one method per MCP tool)
+│   │       ├── MongoStorage.ts/js  MongoDB adapter (default backend)
+│   │       ├── SqliteStorage.ts/js SQLite adapter (FTS5, better-sqlite3)
+│   │       └── factory.ts/js   Backend factory — reads DAKO_STORAGE_BACKEND env var
 │   └── short-term-memory/      Short-term pattern memory MCP source (Go + SQLite)
 │       └── main.go             MCP server (remember_pattern, find_patterns, get_recent_patterns)
 ├── .claude/
@@ -94,11 +98,31 @@ graph TD
 
 ---
 
+## Storage abstraction
+
+The long-term memory MCP uses a domain-method facade (`storage/Storage.ts`) that decouples all tool handlers from the underlying database driver. Backend is selected at server startup via the `DAKO_STORAGE_BACKEND` environment variable:
+
+| Value | Adapter | When to use |
+|---|---|---|
+| `mongodb` (default) | `MongoStorage` | Shared team memory, permanent storage, existing setups |
+| `sqlite` | `SqliteStorage` | Self-contained local use, no database server required |
+
+Unset `DAKO_STORAGE_BACKEND` → defaults to `mongodb` (transparent for existing users).  
+Invalid value → server exits with a clear error naming the field and allowed values.
+
+The hook logger (`logger.mjs`) also routes through the same abstraction — SQLite-backend users get session transcripts in `.dako/memory.db`.
+
+**Forward-compat notes:**
+- Vector search (AC-9): `recall` args will grow optional `embedding` / `mode` fields in a future workitem without changing the interface or requiring a breaking migration.
+- SQLite-to-MongoDB sync (AC-10): every MongoDB document field maps 1:1 to an SQLite column (see field mapping table in `storage/Storage.ts`).
+
+---
+
 ## MCP servers
 
 | Server | Language | Storage | Scope | TTL |
 |---|---|---|---|---|
-| `dako-long-term-memory` | Node.js | MongoDB | Project or Team | Permanent |
+| `dako-long-term-memory` | Node.js | MongoDB or SQLite (pluggable) | Project or Team | Permanent |
 | `dako-short-term-memory` | Go | SQLite (FTS5) | Project, machine-local | 7 days |
 
 ---
@@ -107,7 +131,7 @@ graph TD
 
 | Hook | Trigger | Action |
 |---|---|---|
-| `UserPromptSubmit` | User sends a message | Log user turn to MongoDB `messages` |
+| `UserPromptSubmit` | User sends a message | Log user turn to storage `messages` |
 | `Stop` | Agent finishes responding | Log assistant turn from JSONL transcript |
 | `PreCompact` | Context compression starts | Save last 3 assistant turns as compaction snapshot |
 
@@ -130,14 +154,16 @@ When `claude_session_id` changes (new conversation), a fresh DakoHarness session
 
 ---
 
-## MongoDB collections
+## Storage collections / tables
 
-| Collection | Contents |
+| Collection (MongoDB) / Table (SQLite) | Contents |
 |---|---|
 | `memories` | Long-term memories (decisions, conventions, bugs, context, lessons) |
-| `sessions` | One document per conversation |
+| `sessions` | One document/row per conversation |
 | `messages` | All conversation turns ordered by `seq` |
 | `workitems` | Archived completed workitems (wi_path, project, username, git_commit, documentation) |
+
+SQLite also maintains FTS5 virtual tables (`memories_fts`, `workitems_fts`) with content-rowid linkage for text search parity with MongoDB's `$text` indexes.
 
 ---
 

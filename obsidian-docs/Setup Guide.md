@@ -19,7 +19,7 @@ There are two ways to install DakoHarness:
 | Requirement | Version | Notes |
 |---|---|---|
 | Node.js | 18+ | Required for long-term MCP and logger |
-| MongoDB | 6+ | Native install **or** via Docker — see Step 2 |
+| MongoDB | 6+ | Required for the `mongodb` backend (native install **or** via Docker — see Step 2). Not needed for the `sqlite` backend. |
 | Docker | Any recent | Optional — only needed if MongoDB is not already running |
 | Claude Code | Latest | Must support `--plugin-dir` |
 
@@ -84,12 +84,16 @@ Run this inside Claude Code, in your project directory:
 ```
 
 This runs the full DakoHarness setup for the current project:
-- Checks MongoDB on port 27017 and starts a Docker container if needed
-- Prompts for MongoDB credentials (shows existing defaults if already configured)
-- Writes `mcps/mongodb-memory/.env` with connection settings
-- Tests the MongoDB connection
+- Prompts for the storage backend choice: **mongodb** (default) or **sqlite**
+- On `mongodb`: checks MongoDB on port 27017, starts a Docker container if needed, prompts for credentials, writes `.env` with MongoDB fields + `DAKO_STORAGE_BACKEND=mongodb`
+- On `sqlite`: skips MongoDB entirely, writes `.env` with only `DAKO_STORAGE_BACKEND=sqlite`, `DAKO_SQLITE_PATH=.dako/memory.db`, and `DAKO_AGENT`
+- Tests the MongoDB connection (mongodb backend only)
 - Writes `.mcp.json` with both MCP servers and correct absolute paths
 - Injects the DakoHarness memory protocol block into the project's `CLAUDE.md`
+
+**SQLite data location:** `.dako/memory.db` in the DakoHarness installation root. This directory is shared with the short-term MCP (`patterns.db`) — no filename collision.
+
+Already-configured components are skipped automatically, so the command is safe to re-run. The DakoHarness installation path is stored in `~/.dako/config` after the first run — subsequent runs in any project will not ask for it again.
 
 Already-configured components are skipped automatically, so the command is safe to re-run. The DakoHarness installation path is stored in `~/.dako/config` after the first run — subsequent runs in any project will not ask for it again.
 
@@ -146,7 +150,9 @@ npm install
 
 ## Step 3 — Configure environment
 
-Create `mcps/mongodb-memory/.env`:
+Create `mcps/mongodb-memory/.env`. Choose the block that matches your chosen backend:
+
+**MongoDB backend (default):**
 
 ```env
 MONGO_USER=dako
@@ -155,10 +161,21 @@ MONGO_HOST=localhost
 MONGO_PORT=27017
 MONGO_DB=agent_memory
 MONGO_URI=mongodb://dako:harness@localhost:27017/agent_memory?authSource=admin
+DAKO_AGENT=claude-code
+DAKO_STORAGE_BACKEND=mongodb
+# DAKO_PROJECT=MyProject   # optional — defaults to cwd basename
+```
 
+**SQLite backend (no MongoDB required):**
+
+```env
+DAKO_STORAGE_BACKEND=sqlite
+DAKO_SQLITE_PATH=.dako/memory.db
 DAKO_AGENT=claude-code
 # DAKO_PROJECT=MyProject   # optional — defaults to cwd basename
 ```
+
+The SQLite database is created automatically at `DAKO_SQLITE_PATH` on first run. The `.dako/` directory is shared with the short-term MCP (which stores `patterns.db` there) — no collision.
 
 ---
 

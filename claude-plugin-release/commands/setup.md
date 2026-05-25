@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Full first-time setup for DakoHarness in the current project — MongoDB check, .env, .mcp.json, and CLAUDE.md injection. Safe to re-run; already-configured components are skipped.
+description: Full first-time setup for DakoHarness in the current project — storage backend choice, .env, .mcp.json, and CLAUDE.md injection. Safe to re-run; already-configured components are skipped.
 ---
 
 ## When to use
@@ -19,10 +19,29 @@ Once after installing the dako plugin in a new project. Also safe to re-run to v
   - Write `DAKO_HOME=<path>` to `~/.dako/config`.
 - Use `$DAKO_HOME` for all subsequent path construction. When embedding paths in JSON, convert backslashes to forward slashes.
 
-### 2. Check MongoDB and start via Docker if needed
+### 2. Choose storage backend
+
+- If `<DAKO_HOME>/mcps/mongodb-memory/.env` already exists: read `DAKO_STORAGE_BACKEND` from it (default `mongodb` if absent). Skip prompting and use the existing backend silently — record the existing value in the summary.
+- If `.env` does not yet exist: prompt the user:
+
+  ```
+  Storage backend:
+    [1] mongodb (default) — requires MongoDB; permanent storage; team-shareable
+    [2] sqlite            — self-contained; no database server needed; stored in .dako/memory.db
+  Choice [1]:
+  ```
+
+  - `1` or empty → backend = `mongodb`
+  - `2` → backend = `sqlite`
+
+- Record the chosen backend. Use it to determine which subsequent steps apply.
+
+### 3. MongoDB check and credentials (mongodb backend only)
+
+> Skip this entire step if backend = `sqlite`. Record `"MongoDB — skipped (sqlite backend)"`.
 
 - Check if MongoDB is accessible on `localhost:27017`.
-- If accessible: proceed to Step 3.
+- If accessible: proceed to credential prompting.
 - If not accessible:
   - Check if Docker is available (`docker info`).
   - If Docker is available:
@@ -37,9 +56,7 @@ Once after installing the dako plugin in a new project. Also safe to re-run to v
       ```
     - Wait briefly, then re-check port 27017 to confirm it is now accessible.
   - If Docker is not available: stop and report —
-    `"MongoDB is not running on port 27017 and Docker is not available. Install Docker or start MongoDB manually on port 27017, then re-run /dako:setup."`
-
-### 3. Prompt for MongoDB credentials
+    `"MongoDB is not running on port 27017 and Docker is not available. Install Docker or start MongoDB manually on port 27017, then re-run /dako:setup. Alternatively, choose the sqlite backend."`
 
 - Check if `<DAKO_HOME>/mcps/mongodb-memory/.env` already exists.
   - If it exists: read `MONGO_USER`, `MONGO_PASSWORD`, `MONGO_HOST`, `MONGO_PORT`, `MONGO_DB` from it to use as defaults. Skip prompting and use these values silently (needed for Step 5).
@@ -59,7 +76,9 @@ Once after installing the dako plugin in a new project. Also safe to re-run to v
 ### 4. Write .env (skip if already present)
 
 - If `<DAKO_HOME>/mcps/mongodb-memory/.env` already exists: skip. Record `".env — skipped (already present)"`.
-- Otherwise write the file with exactly these fields:
+- Otherwise write the file based on the chosen backend:
+
+  **mongodb backend:**
   ```
   MONGO_USER=<user>
   MONGO_PASSWORD=<pass>
@@ -68,10 +87,21 @@ Once after installing the dako plugin in a new project. Also safe to re-run to v
   MONGO_DB=<db>
   MONGO_URI=<uri>
   DAKO_AGENT=claude-code
+  DAKO_STORAGE_BACKEND=mongodb
   ```
+
+  **sqlite backend:**
+  ```
+  DAKO_STORAGE_BACKEND=sqlite
+  DAKO_SQLITE_PATH=.dako/memory.db
+  DAKO_AGENT=claude-code
+  ```
+
   Record `".env — written"`.
 
-### 5. Test MongoDB connection
+### 5. Test MongoDB connection (mongodb backend only)
+
+> Skip this entire step if backend = `sqlite`. Record `"Connection test — skipped (sqlite backend)"`.
 
 - Check if `<DAKO_HOME>/mcps/mongodb-memory/node_modules/mongodb` exists.
 - If it does not: skip and record `"Connection test — skipped (node_modules not found; run: npm install --prefix <DAKO_HOME>/mcps/mongodb-memory)"`.
@@ -172,7 +202,8 @@ Output a result table:
 | Component | Result |
 |---|---|
 | DakoHarness path (`DAKO_HOME`) | `<resolved-path>` |
-| MongoDB | running / started via Docker |
+| Storage backend | mongodb / sqlite |
+| MongoDB | running / started via Docker / skipped |
 | `.env` | written / skipped |
 | Connection test | passed / warning / skipped |
 | `.mcp.json` | written / skipped |

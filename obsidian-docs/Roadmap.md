@@ -21,12 +21,13 @@ created: 2026-05-20
 
 ## Phase 1 — Memory foundation ✅
 
-- Long-term memory MCP (MongoDB / Node.js / TypeScript)
+- Long-term memory MCP (Node.js + TypeScript; pluggable storage backend — MongoDB or SQLite)
 - Short-term memory MCP (Go / SQLite / FTS5 / 7-day TTL)
-- Session logging via Claude Code hooks (UserPromptSubmit, Stop)
+- Session logging via Claude Code hooks (UserPromptSubmit, Stop); hook logger routes through storage abstraction
 - CLAUDE.md memory protocol
 - Slash commands: /recall, /promote, /session-end
 - `forget` tool for deleting stale memories
+- Storage abstraction layer (`storage/` subfolder): `Storage` interface, `MongoStorage` adapter, `SqliteStorage` adapter, backend factory
 
 ---
 
@@ -125,7 +126,6 @@ Per-agent adapter layer for:
 | Item | Description |
 |---|---|
 | Sub-agent delegation for implementation | The entire implementation phase currently runs inside the main agent, consuming its context window. Delegate coding tasks to sub-agents via the Agent tool to keep the main context clean and enable parallel work across plan steps. |
-| Pluggable long-term memory backend | Requiring MongoDB is a high barrier to entry. Abstract the storage layer so alternative backends (PostgreSQL, SQLite, hosted) are supported. MongoDB remains the default and preferred option. |
 | Context management improvements | Broaden compaction recovery into a proactive strategy: smarter pre-compaction snapshots, context pressure monitoring, and tighter integration between the two-tier memory system and in-session context usage. |
 | Memory quality over time | Memories only accumulate — no signal for stale, contradicted, or duplicated entries. Add a review/consolidation process: deduplicate across sessions, flag memories superseded by newer decisions, and merge contradictions. Matters most after months of active use. |
 | Semantic search for recall | `recall` uses keyword/text search. Embedding-based semantic search would make long-term memory useful for vague or paraphrased queries (e.g. "how should I structure the data layer?" finding "always use the repository pattern"). |

@@ -6,7 +6,7 @@ An extensible harness for coding agents. Provides a two-tier memory system (long
 
 ```
 mcps/
-  mongodb-memory/   Long-term memory MCP (Node.js, MongoDB)
+  mongodb-memory/   Long-term memory MCP (Node.js, MongoDB or SQLite via DAKO_STORAGE_BACKEND)
   short-term-memory/ Short-term pattern memory MCP (Go, SQLite, 7-day TTL)
 .claude/
   settings.json     Hook configuration (UserPromptSubmit + Stop)

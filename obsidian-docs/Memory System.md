@@ -13,8 +13,26 @@ DakoHarness uses a two-tier memory model. Each tier has a distinct purpose and l
 
 | Tier | Storage | Scope | TTL | Purpose |
 |---|---|---|---|---|
-| **Long-term** | MongoDB | Project or Team | Permanent | Decisions, conventions, bugs, lessons |
+| **Long-term** | MongoDB or SQLite (pluggable) | Project or Team | Permanent | Decisions, conventions, bugs, lessons |
 | **Short-term** | SQLite (FTS5) | Project, machine-local | 7 days | Recent patterns, accepted approaches |
+
+---
+
+## Backend selection (long-term tier)
+
+The long-term MCP supports two storage backends selected by the `DAKO_STORAGE_BACKEND` field in `.env`:
+
+| Value | Backend | Prerequisites | Data location |
+|---|---|---|---|
+| `mongodb` (default) | MongoDB | MongoDB 6+ running (or via Docker) | MongoDB `agent_memory` database |
+| `sqlite` | SQLite (FTS5) | Node.js only — no database server | `.dako/memory.db` (same directory as STM patterns) |
+
+**When to use MongoDB:** team setups, shared memory across machines, existing installations.  
+**When to use SQLite:** local/solo use, no Docker available, simpler setup.
+
+An unset `DAKO_STORAGE_BACKEND` behaves identically to `mongodb` — existing users see zero change. An invalid value causes the server to exit with a clear error.
+
+Both backends support full-text search (MongoDB `$text` indexes; SQLite FTS5 `BM25` ranking) on memory title+content and workitem documentation.
 
 > [!NOTE]
 > Memory is **pull-based** — the agent never preloads memory at session start. It searches only when the task warrants it.
