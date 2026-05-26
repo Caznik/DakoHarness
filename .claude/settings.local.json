@@ -56,7 +56,13 @@
       "Bash(Select-Object -First 10)",
       "Bash(xargs grep \"^status:\")",
       "Bash(go build *)",
-      "Bash(C:/lab/Proyectos/DakoHarness/bin/dako-stm.exe)"
+      "Bash(C:/lab/Proyectos/DakoHarness/bin/dako-stm.exe)",
+      "Bash(Get-Command dako *)",
+      "Bash(node --test migrate.test.js)",
+      "Bash(jobs)",
+      "Bash(wait)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(rm -f test-output.log)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -37,6 +37,27 @@ Both backends support full-text search (MongoDB `$text` indexes; SQLite FTS5 `BM
 > [!NOTE]
 > Memory is **pull-based** — the agent never preloads memory at session start. It searches only when the task warrants it.
 
+### Migrating from SQLite to MongoDB
+
+If you started on SQLite and later want to switch to MongoDB without losing stored memories, workitems, sessions, or messages, run the one-shot migrator inside the long-term memory MCP:
+
+```bash
+cd mcps/mongodb-memory
+npm run migrate                  # full migration
+npm run migrate -- --dry-run     # preflight: prints plan, makes no writes
+```
+
+What it does:
+
+- Reads `mcps/mongodb-memory/.env` for both source and target connection settings (`DAKO_SQLITE_PATH`, `MONGO_URI`, `MONGO_DB`).
+- Copies all four collections (`memories`, `workitems`, `sessions`, `messages`) per the field-mapping spec in `storage/Storage.ts`. Dedupes by natural key, so any MongoDB rows that already match are skipped — the run is idempotent.
+- On success: rewrites `DAKO_STORAGE_BACKEND` in `.env` to `mongodb` (preserving comments, blank lines, line endings, and quoting), then renames the SQLite file to `<basename>.bak-<unix-timestamp>` as a safety net.
+- On any failure (driver error, verification mismatch, `.env` rewrite failure, rename failure): every document inserted by the run is deleted, `.env` is left or reverted to `sqlite`, and the SQLite file stays in place. Re-run safely.
+
+Pre-flight: if `.env` already says `mongodb` (or the key is unset, which is equivalent), the tool exits 0 with a no-op message. Safe to re-run after success.
+
+Stop the long-term MCP before running the migration so it does not write to either backend mid-run.
+
 ---
 
 ## When to search

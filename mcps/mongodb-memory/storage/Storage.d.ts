@@ -74,5 +74,95 @@
  * │ timestamp Date   │ timestamp TEXT      │ ISO-8601 string                      │
  * └──────────────────┴─────────────────────┴──────────────────────────────────────┘
  */
-export {};
-//# sourceMappingURL=Storage.js.map
+export interface RememberArgs {
+    project: string;
+    agent: string;
+    type: string;
+    title: string;
+    content: string;
+    tags?: string[];
+    session_id?: string;
+    scope?: string;
+}
+export interface RecallArgs {
+    project: string;
+    query: string;
+    type?: string;
+    limit?: number;
+    include_team?: boolean;
+}
+export interface GetContextArgs {
+    project: string;
+    type?: string;
+}
+export interface PromoteToTeamArgs {
+    project: string;
+    title: string;
+    type?: string;
+}
+export interface ForgetArgs {
+    project: string;
+    title: string;
+    type?: string;
+}
+export interface ListMemoriesArgs {
+    project: string;
+    type?: string;
+    limit?: number;
+}
+export interface ArchiveWorkitemArgs {
+    wi_path: string;
+    project: string;
+    username?: string;
+    git_commit?: string;
+    documentation: string;
+}
+export interface StartSessionArgs {
+    project: string;
+    agent: string;
+    cwd?: string;
+    session_id?: string;
+}
+export interface LogMessageArgs {
+    session_id: string;
+    role: string;
+    content: string;
+}
+export interface GetSessionArgs {
+    session_id: string;
+}
+export interface ListSessionsArgs {
+    project: string;
+    agent?: string;
+    limit?: number;
+}
+/** Shape returned by the MCP SDK's tool response — text content block. */
+export interface ToolResult {
+    content: Array<{
+        type: "text";
+        text: string;
+    }>;
+}
+/**
+ * One method per MCP tool, plus nextMessageSeq used by logger.mjs.
+ *
+ * All methods are async even if the underlying adapter is synchronous
+ * (better-sqlite3 is sync, but the interface must be uniform).
+ */
+export interface Storage {
+    remember(args: RememberArgs): Promise<ToolResult>;
+    recall(args: RecallArgs): Promise<ToolResult>;
+    getContext(args: GetContextArgs): Promise<ToolResult>;
+    promoteToTeam(args: PromoteToTeamArgs): Promise<ToolResult>;
+    forget(args: ForgetArgs): Promise<ToolResult>;
+    listMemories(args: ListMemoriesArgs): Promise<ToolResult>;
+    archiveWorkitem(args: ArchiveWorkitemArgs): Promise<ToolResult>;
+    startSession(args: StartSessionArgs): Promise<ToolResult>;
+    logMessage(args: LogMessageArgs): Promise<ToolResult>;
+    getSession(args: GetSessionArgs): Promise<ToolResult>;
+    listSessions(args: ListSessionsArgs): Promise<ToolResult>;
+    getSystemStatus(): Promise<ToolResult>;
+    nextMessageSeq(session_id: string): Promise<number>;
+    close(): Promise<void>;
+}
+//# sourceMappingURL=Storage.d.ts.map

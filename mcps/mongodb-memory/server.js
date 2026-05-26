@@ -1,4 +1,3 @@
-// AUTO-MIRROR of server.ts — keep in sync (no build step yet)
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
@@ -6,20 +5,15 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import * as dotenv from "dotenv";
 import { getStorage } from "./storage/factory.js";
-
 dotenv.config({ path: join(dirname(fileURLToPath(import.meta.url)), ".env") });
-
 const MEMORY_TYPES = ["decision", "convention", "bug", "context", "lesson"];
 const MEMORY_SCOPES = ["project", "team"];
-
 async function main() {
     // Backend is selected by DAKO_STORAGE_BACKEND (default: mongodb).
     // MongoStorage.create() opens the connection and creates indexes.
     // An invalid backend value throws here and exits non-zero (AC-4).
     const storage = await getStorage();
-
     const server = new Server({ name: "dako-long-term-memory", version: "2.0.0" }, { capabilities: { tools: {} } });
-
     server.setRequestHandler(ListToolsRequestSchema, async () => ({
         tools: [
             // ── Long-term memory ──────────────────────────────────────────────────
@@ -189,31 +183,39 @@ Call this at the start of a session to restore project context before working.`,
             }
         ]
     }));
-
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const { name, arguments: args } = request.params;
-
-        if (name === "remember")          return storage.remember(args);
-        if (name === "recall")            return storage.recall(args);
-        if (name === "get_context")       return storage.getContext(args);
-        if (name === "get_system_status") return storage.getSystemStatus();
-        if (name === "start_session")     return storage.startSession(args);
-        if (name === "log_message")       return storage.logMessage(args);
-        if (name === "get_session")       return storage.getSession(args);
-        if (name === "list_sessions")     return storage.listSessions(args);
-        if (name === "promote_to_team")   return storage.promoteToTeam(args);
-        if (name === "forget")            return storage.forget(args);
-        if (name === "list_memories")     return storage.listMemories(args);
-        if (name === "archive_workitem")  return storage.archiveWorkitem(args);
-
+        if (name === "remember")
+            return storage.remember(args);
+        if (name === "recall")
+            return storage.recall(args);
+        if (name === "get_context")
+            return storage.getContext(args);
+        if (name === "get_system_status")
+            return storage.getSystemStatus();
+        if (name === "start_session")
+            return storage.startSession(args);
+        if (name === "log_message")
+            return storage.logMessage(args);
+        if (name === "get_session")
+            return storage.getSession(args);
+        if (name === "list_sessions")
+            return storage.listSessions(args);
+        if (name === "promote_to_team")
+            return storage.promoteToTeam(args);
+        if (name === "forget")
+            return storage.forget(args);
+        if (name === "list_memories")
+            return storage.listMemories(args);
+        if (name === "archive_workitem")
+            return storage.archiveWorkitem(args);
         throw new Error(`Unknown tool: ${name}`);
     });
-
     const transport = new StdioServerTransport();
     await server.connect(transport);
 }
-
 main().catch((err) => {
     console.error(err instanceof Error ? err.message : String(err));
     process.exit(1);
 });
+//# sourceMappingURL=server.js.map

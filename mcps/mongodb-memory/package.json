@@ -4,7 +4,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "migrate": "tsc && node migrate.js",
+    "test": "tsc && node --test migrate.test.js"
   },
   "keywords": [],
   "author": "",

@@ -309,7 +309,6 @@ When Claude Code compacts context:
 | Permission harness | Structured permission management layer |
 | MongoDB dashboard | Visual interface for browsing sessions and memories |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations |
-| SQLite → MongoDB sync | Migrate long-term memory data from a SQLite backend to MongoDB (`dako migrate --from sqlite --to mongodb`). Field mapping table in `storage/Storage.ts` is the spec; no data reconstruction needed (AC-10 forward-compat). |
 
 ---
 
