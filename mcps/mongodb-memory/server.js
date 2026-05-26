@@ -44,7 +44,7 @@ Types:
             },
             {
                 name: "recall",
-                description: "Full-text search across memories for a project. Use to find relevant context before starting work.",
+                description: "Search memories for a project. Default auto-detects: hybrid (FTS + vector RRF) if embeddings exist for the configured model, else keyword-only. Pass `mode` to force a specific strategy; pass `embedding` (base64 Float32) to skip server-side query embedding.",
                 inputSchema: {
                     type: "object",
                     properties: {
@@ -52,9 +52,22 @@ Types:
                         query: { type: "string", description: "Search terms (matched against title and content)" },
                         type: { type: "string", enum: [...MEMORY_TYPES], description: "Filter by memory type (optional)" },
                         limit: { type: "number", description: "Max results to return", default: 10 },
-                        include_team: { type: "boolean", description: "Also search team-scoped memories from all projects (default false)" }
+                        include_team: { type: "boolean", description: "Also search team-scoped memories from all projects (default false)" },
+                        mode: { type: "string", enum: ["keyword", "vector", "hybrid"], description: "Recall strategy. Default auto-detects: hybrid if embeddings exist, else keyword." },
+                        embedding: { type: "string", description: "Base64-encoded Float32 query embedding. If omitted, the server computes it from query." }
                     },
                     required: ["project", "query"]
+                }
+            },
+            {
+                name: "embed_query",
+                description: "Compute an embedding for a query string using the configured DAKO_EMBEDDING_MODEL. Returns {embedding (base64 Float32), model (string)}. Used by the /recall skill to embed once and reuse across keyword variants.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        text: { type: "string", description: "Text to embed" }
+                    },
+                    required: ["text"]
                 }
             },
             {
@@ -187,8 +200,20 @@ Call this at the start of a session to restore project context before working.`,
         const { name, arguments: args } = request.params;
         if (name === "remember")
             return storage.remember(args);
-        if (name === "recall")
-            return storage.recall(args);
+        if (name === "recall") {
+            // Boundary: agent passes embedding as base64; the Storage interface takes Buffer.
+            const a = (args ?? {});
+            const decoded = { ...a };
+            if (typeof a.embedding === "string" && a.embedding.length > 0) {
+                decoded["embedding"] = Buffer.from(a.embedding, "base64");
+            }
+            else {
+                delete decoded["embedding"];
+            }
+            return storage.recall(decoded);
+        }
+        if (name === "embed_query")
+            return storage.embedQuery(args);
         if (name === "get_context")
             return storage.getContext(args);
         if (name === "get_system_status")

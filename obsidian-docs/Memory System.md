@@ -60,6 +60,47 @@ Stop the long-term MCP before running the migration so it does not write to eith
 
 ---
 
+## Vector recall (embeddings)
+
+The long-term memory MCP supports optional local embeddings for semantic recall on top of the keyword/FTS path. Embedding is computed in-process via Transformers.js — no external service required.
+
+### Configuration
+
+| Env var | Default | Effect |
+|---|---|---|
+| `DAKO_EMBEDDING_MODEL` | `Xenova/all-MiniLM-L6-v2` | Selects the embedding model. First call lazy-downloads it to `node_modules/.cache/transformers/`. |
+
+The default model is 384-dim, English-tuned, ~30MB. Power users can switch to larger or multilingual variants (e.g. `Xenova/bge-small-en-v1.5`, `Xenova/paraphrase-multilingual-MiniLM-L12-v2`) by setting this env var.
+
+### How `recall` uses embeddings
+
+`recall` accepts a `mode: "keyword" | "vector" | "hybrid"` arg. Default is **auto-detect**: hybrid if any memory in the project has an embedding matching the current `DAKO_EMBEDDING_MODEL`, keyword otherwise. Existing setups without embeddings see zero behavior change until you run the backfill.
+
+Hybrid scoring uses **Reciprocal Rank Fusion** (k=60, equal weights, 2× limit candidates per side) to merge FTS and vector results. Single-side fallback: if one side returns zero candidates, the other side's order is used directly.
+
+New memories are embedded inline at `remember` time. If embedding fails (model load error, OOM), the memory is still stored — with no embedding — and a stderr warning is logged. That row is searchable via keyword recall but skipped by vector recall.
+
+The `/recall` skill preflights once via the `embed_query` MCP tool so the keyword variants all reuse the same query embedding for their vector halves.
+
+### Backfilling existing memories
+
+To embed memories that pre-date this feature (or after switching the model), run:
+
+```bash
+cd mcps/mongodb-memory
+npm run embed-backfill                  # embed every row whose model doesn't match
+npm run embed-backfill -- --dry-run     # preflight: prints plan, makes no writes
+npm run embed-backfill -- --force       # re-embed every row regardless of current model
+```
+
+Idempotent: re-running on a fully-embedded database completes in milliseconds and reports `0 embedded, N skipped`. Per-batch error isolation means a single failure doesn't abort the run.
+
+### Model mismatch handling
+
+Each embedding is tagged with the model id that produced it. Rows whose `embedding_model` differs from the current `DAKO_EMBEDDING_MODEL` are excluded from the vector half of recall but remain searchable via the FTS half. Switching models is graceful — no crash, no required migration — but vector recall quality degrades for mismatched rows until you run `npm run embed-backfill --force`.
+
+---
+
 ## When to search
 
 | Situation | Tool | Tier |

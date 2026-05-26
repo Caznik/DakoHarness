@@ -62,7 +62,13 @@
       "Bash(jobs)",
       "Bash(wait)",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(rm -f test-output.log)"
+      "Bash(rm -f test-output.log)",
+      "Bash(git stash *)",
+      "Bash(git checkout *)",
+      "Bash(node --test embed.test.js)",
+      "Bash(node --test embed-backfill.test.js)",
+      "Bash(node --test recall-hybrid.test.js)",
+      "Bash(node --test migrate.test.js embed.test.js embed-backfill.test.js recall-hybrid.test.js)"
     ]
   },
   "enableAllProjectMcpServers": true,

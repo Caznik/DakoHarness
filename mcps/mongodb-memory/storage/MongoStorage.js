@@ -10,8 +10,9 @@
  * Index creation moves here from main() in server.ts so that the server
  * entry point no longer needs to know which backend's indexes to create.
  */
-import { MongoClient } from "mongodb";
+import { MongoClient, Binary } from "mongodb";
 import { randomUUID } from "crypto";
+import { embedTexts, getModelId, floatsToBytes, bytesToFloats, cosine, rrfMerge, } from "../embed.js";
 export class MongoStorage {
     client;
     db;
@@ -38,6 +39,9 @@ export class MongoStorage {
         // Indexes — same 4 created previously in server.ts main()
         await db.collection("memories").createIndex({ title: "text", content: "text" }, { name: "memories_text_search" });
         await db.collection("memories").createIndex({ scope: 1 });
+        // WI-local-embedding-recall: index on embedding_model so the mismatch-skip
+        // filter for vector recall is server-side fast even with many memories.
+        await db.collection("memories").createIndex({ embedding_model: 1 });
         await db.collection("workitems").createIndex({ project: 1, wi_path: 1 });
         await db.collection("workitems").createIndex({ documentation: "text" }, { name: "workitems_text_search" });
         return new MongoStorage(client, db);
@@ -46,36 +50,139 @@ export class MongoStorage {
     async remember(args) {
         const { project, agent, type, title, content, tags = [], session_id, scope = "project" } = args;
         const memories = this.db.collection("memories");
-        await memories.insertOne({
+        const result = await memories.insertOne({
             project, agent, type, title, content, tags, scope,
             ...(session_id ? { session_id } : {}),
             timestamp: new Date(),
         });
+        // Inline embed (AC-3). Failure does not block insert — log to stderr.
+        try {
+            const [vec] = await embedTexts([`${title}\n${content}`]);
+            if (vec) {
+                await memories.updateOne({ _id: result.insertedId }, { $set: { embedding: new Binary(floatsToBytes(vec), 0), embedding_model: getModelId() } });
+            }
+        }
+        catch (err) {
+            const reason = err instanceof Error ? err.message : String(err);
+            process.stderr.write(`[embed] inline embed failed for "${title}": ${reason}\n`);
+        }
         return { content: [{ type: "text", text: `Remembered [${type}]: "${title}"` }] };
     }
     // ── RECALL ────────────────────────────────────────────────────────────────
     async recall(args) {
-        const { project, query, type, limit = 10, include_team = false } = args;
+        const { project, query, type, limit = 10, include_team = false, mode: suppliedMode, embedding } = args;
         const memories = this.db.collection("memories");
-        const filter = { $text: { $search: query } };
-        if (include_team) {
-            filter["$or"] = [{ project }, { scope: "team" }];
+        const currentModel = getModelId();
+        const candidateCap = Math.max(2 * limit, 1);
+        // Per plan Risks 5: bound vector-half candidate-fetch to keep memory sane.
+        const vectorFetchLimit = Math.max(500, 2 * limit);
+        // Project filter builder shared across both halves and the auto-detect probe.
+        const projectFilter = () => include_team ? { $or: [{ project }, { scope: "team" }] } : { project };
+        // ── Auto-detect mode (AC-4) ──────────────────────────────────────────────
+        const hasEmbeddings = async () => {
+            const probe = await memories.findOne({
+                ...projectFilter(),
+                embedding_model: currentModel,
+                embedding: { $exists: true, $ne: null },
+            }, { projection: { _id: 1 } });
+            return probe !== null;
+        };
+        let mode;
+        if (suppliedMode) {
+            mode = suppliedMode;
+            if (mode === "vector" && !(await hasEmbeddings())) {
+                throw new Error(`No embeddings for model '${currentModel}' in project '${project}'. Run 'npm run embed-backfill' to embed existing memories.`);
+            }
         }
         else {
-            filter["project"] = project;
+            mode = (await hasEmbeddings()) ? "hybrid" : "keyword";
         }
-        if (type)
-            filter["type"] = type;
-        const results = await memories
-            .find(filter, { projection: { score: { $meta: "textScore" } } })
-            .sort({ score: { $meta: "textScore" } })
-            .limit(limit)
-            .toArray();
-        if (results.length === 0) {
+        // ── Keyword half — $text query, ordered by textScore desc ────────────────
+        const runKeyword = async (cap) => {
+            const filter = { $text: { $search: query }, ...projectFilter() };
+            if (type)
+                filter["type"] = type;
+            try {
+                return await memories
+                    .find(filter, { projection: { score: { $meta: "textScore" } } })
+                    .sort({ score: { $meta: "textScore" } })
+                    .limit(cap)
+                    .toArray();
+            }
+            catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                process.stderr.write(`[recall] $text query failed for "${query}": ${msg}\n`);
+                return [];
+            }
+        };
+        // ── Vector half — cosine over Float32 buffers ────────────────────────────
+        const runVector = async (cap) => {
+            let queryVec;
+            if (embedding) {
+                queryVec = bytesToFloats(embedding);
+            }
+            else {
+                const [v] = await embedTexts([query]);
+                if (!v)
+                    return [];
+                queryVec = v;
+            }
+            const filter = {
+                ...projectFilter(),
+                embedding_model: currentModel,
+                embedding: { $exists: true, $ne: null },
+            };
+            if (type)
+                filter["type"] = type;
+            // Pull candidates client-side. We bound at vectorFetchLimit (plan choice).
+            const rows = await memories.find(filter).limit(vectorFetchLimit).toArray();
+            const scored = rows.map((r) => {
+                // Mongo driver returns Binary; .buffer is the Node Buffer view.
+                const bin = r["embedding"];
+                const buf = bin instanceof Binary ? Buffer.from(bin.buffer) : bin;
+                const rowVec = bytesToFloats(buf);
+                return { row: r, score: cosine(queryVec, rowVec) };
+            });
+            scored.sort((a, b) => b.score - a.score);
+            return scored.slice(0, cap).map((s) => s.row);
+        };
+        // ── Branch ───────────────────────────────────────────────────────────────
+        let finalRows;
+        if (mode === "keyword") {
+            finalRows = await runKeyword(limit);
+        }
+        else if (mode === "vector") {
+            finalRows = (await runVector(limit)).slice(0, limit);
+        }
+        else {
+            const ftsRows = await runKeyword(candidateCap);
+            const vecRows = await runVector(candidateCap);
+            const idOf = (r) => String(r["_id"]);
+            const byId = new Map();
+            for (const r of ftsRows)
+                byId.set(idOf(r), r);
+            for (const r of vecRows)
+                if (!byId.has(idOf(r)))
+                    byId.set(idOf(r), r);
+            const mergedIds = rrfMerge(ftsRows.map(idOf), vecRows.map(idOf), limit);
+            finalRows = mergedIds.map((id) => byId.get(id)).filter(Boolean);
+        }
+        if (finalRows.length === 0) {
             return { content: [{ type: "text", text: `No memories found for "${query}" in project "${project}".` }] };
         }
-        const formatted = results.map((m) => `[${m["type"].toUpperCase()}] ${m["title"]}\n${m["content"]}${m["tags"]?.length ? `\nTags: ${m["tags"].join(", ")}` : ""}`).join("\n\n---\n\n");
-        return { content: [{ type: "text", text: `${results.length} result(s) for "${query}":\n\n${formatted}` }] };
+        const formatted = finalRows.map((m) => `[${m["type"].toUpperCase()}] ${m["title"]}\n${m["content"]}${m["tags"]?.length ? `\nTags: ${m["tags"].join(", ")}` : ""}`).join("\n\n---\n\n");
+        return { content: [{ type: "text", text: `${finalRows.length} result(s) for "${query}":\n\n${formatted}` }] };
+    }
+    // ── EMBED QUERY ───────────────────────────────────────────────────────────
+    async embedQuery(args) {
+        const [vec] = await embedTexts([args.text]);
+        if (!vec)
+            throw new Error("embedTexts returned empty result");
+        const payload = {
+            embedding: floatsToBytes(vec).toString("base64"),
+            model: getModelId(),
+        };
+        return { content: [{ type: "text", text: JSON.stringify(payload) }] };
     }
     // ── GET CONTEXT ───────────────────────────────────────────────────────────
     async getContext(args) {

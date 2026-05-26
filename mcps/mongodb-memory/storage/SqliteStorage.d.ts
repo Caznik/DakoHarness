@@ -22,7 +22,7 @@
  * A separate vector index (e.g. sqlite-vss extension) attaches alongside the
  * existing FTS5 table without requiring the FTS5 table to change.
  */
-import type { Storage, ToolResult, RememberArgs, RecallArgs, GetContextArgs, PromoteToTeamArgs, ForgetArgs, ListMemoriesArgs, ArchiveWorkitemArgs, StartSessionArgs, LogMessageArgs, GetSessionArgs, ListSessionsArgs } from "./Storage.js";
+import type { Storage, ToolResult, RememberArgs, RecallArgs, EmbedQueryArgs, GetContextArgs, PromoteToTeamArgs, ForgetArgs, ListMemoriesArgs, ArchiveWorkitemArgs, StartSessionArgs, LogMessageArgs, GetSessionArgs, ListSessionsArgs } from "./Storage.js";
 export declare class SqliteStorage implements Storage {
     private db;
     private constructor();
@@ -32,6 +32,7 @@ export declare class SqliteStorage implements Storage {
     static create(dbPath: string): SqliteStorage;
     remember(args: RememberArgs): Promise<ToolResult>;
     recall(args: RecallArgs): Promise<ToolResult>;
+    embedQuery(args: EmbedQueryArgs): Promise<ToolResult>;
     getContext(args: GetContextArgs): Promise<ToolResult>;
     promoteToTeam(args: PromoteToTeamArgs): Promise<ToolResult>;
     forget(args: ForgetArgs): Promise<ToolResult>;

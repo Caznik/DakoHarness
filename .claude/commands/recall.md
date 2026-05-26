@@ -17,10 +17,13 @@ Search long-term memory for context relevant to the keywords the user provided, 
    - Inverse framing: "how do I X" ↔ "X tooling"
    Skip trivial variants (singular/plural only) — they add cost without adding coverage.
 
+3.5. **Embed once for the vector side.** Call the `embed_query` MCP tool with `text = <original user keywords, un-expanded>`. Parse the returned JSON to extract the `embedding` field (a base64 Float32 vector). If the call errors (e.g. embeddings not configured on this server), proceed with `embedding = null` — the keyword path still works.
+
 4. **Run all variants.** For each variant, call the `recall` tool with:
    - `project`: the project name from step 1
    - `query`: the variant
    - `limit`: 5
+   - `embedding`: the value from step 3.5 (only if present; omit otherwise). The server handles per-call cross-side hybrid fusion automatically when an embedding is supplied.
 
 5. **Merge results** using rank-based fusion:
    - Dedup key: `[TYPE] title` (the prefix the MCP emits, e.g. `[DECISION] Use MongoDB`)

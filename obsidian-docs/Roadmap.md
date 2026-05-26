@@ -125,7 +125,6 @@ Per-agent adapter layer for:
 
 | Item | Description |
 |---|---|
-| Local embedding model for recall | `recall` ships agent-side query expansion today (WI-semantic-recall). Adding an optional local embedding backend (e.g. Transformers.js, sentence-transformers) would give true semantic search for vague or paraphrased queries. Forward-compat hooks already reserved in `Storage.ts` and SQLite schema. |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history. |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi, Codex CLI. |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations. |

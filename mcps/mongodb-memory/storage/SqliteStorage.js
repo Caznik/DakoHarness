@@ -26,6 +26,7 @@ import Database from "better-sqlite3";
 import { mkdirSync } from "fs";
 import { dirname } from "path";
 import { randomUUID } from "crypto";
+import { embedTexts, getModelId, floatsToBytes, bytesToFloats, cosine, rrfMerge, } from "../embed.js";
 export class SqliteStorage {
     db;
     constructor(db) {
@@ -129,6 +130,21 @@ export class SqliteStorage {
       );
       CREATE INDEX IF NOT EXISTS messages_session_seq ON messages (session_id, seq);
     `);
+        // WI-local-embedding-recall: idempotent ALTER TABLE to add vector columns.
+        // better-sqlite3 throws "duplicate column name" on subsequent runs — catch
+        // that one specific error and rethrow anything else.
+        const addColumnIfMissing = (sql) => {
+            try {
+                db.exec(sql);
+            }
+            catch (err) {
+                const msg = err instanceof Error ? err.message : String(err);
+                if (!/duplicate column name/i.test(msg))
+                    throw err;
+            }
+        };
+        addColumnIfMissing(`ALTER TABLE memories ADD COLUMN embedding BLOB`);
+        addColumnIfMissing(`ALTER TABLE memories ADD COLUMN embedding_model TEXT`);
         return new SqliteStorage(db);
     }
     // ── REMEMBER ──────────────────────────────────────────────────────────────
@@ -138,51 +154,161 @@ export class SqliteStorage {
       INSERT INTO memories (project, agent, type, title, content, tags, scope, session_id, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-        stmt.run(project, agent, type, title, content, JSON.stringify(tags), scope, session_id ?? null, new Date().toISOString());
+        const info = stmt.run(project, agent, type, title, content, JSON.stringify(tags), scope, session_id ?? null, new Date().toISOString());
+        // Inline embed (AC-3). Failure does not block insert — log to stderr and
+        // leave embedding/embedding_model NULL. The keyword path still works.
+        try {
+            const [vec] = await embedTexts([`${title}\n${content}`]);
+            if (vec) {
+                this.db.prepare(`UPDATE memories SET embedding = ?, embedding_model = ? WHERE id = ?`)
+                    .run(floatsToBytes(vec), getModelId(), info.lastInsertRowid);
+            }
+        }
+        catch (err) {
+            const reason = err instanceof Error ? err.message : String(err);
+            process.stderr.write(`[embed] inline embed failed for "${title}": ${reason}\n`);
+        }
         return { content: [{ type: "text", text: `Remembered [${type}]: "${title}"` }] };
     }
     // ── RECALL ────────────────────────────────────────────────────────────────
     async recall(args) {
-        const { project, query, type, limit = 10, include_team = false } = args;
-        // FTS5 BM25 search — rank column is negative BM25 score (lower = better match)
-        let sql;
-        const params = [query];
-        if (include_team) {
-            // Match project OR team-scoped memories
-            sql = `
-        SELECT m.*, memories_fts.rank
-        FROM memories_fts
-        JOIN memories m ON memories_fts.rowid = m.id
-        WHERE memories_fts MATCH ?
-          AND (m.project = ? OR m.scope = 'team')
-      `;
-            params.push(project);
+        const { project, query, type, limit = 10, include_team = false, mode: suppliedMode, embedding } = args;
+        const currentModel = getModelId();
+        const candidateCap = Math.max(2 * limit, 1);
+        // ── Auto-detect mode (AC-4) ──────────────────────────────────────────────
+        const hasEmbeddings = () => {
+            const probeSql = include_team
+                ? `SELECT 1 FROM memories WHERE (project = ? OR scope = 'team') AND embedding_model = ? AND embedding IS NOT NULL LIMIT 1`
+                : `SELECT 1 FROM memories WHERE project = ? AND embedding_model = ? AND embedding IS NOT NULL LIMIT 1`;
+            const row = this.db.prepare(probeSql).get(project, currentModel);
+            return row !== undefined;
+        };
+        let mode;
+        if (suppliedMode) {
+            mode = suppliedMode;
+            if (mode === "vector" && !hasEmbeddings()) {
+                throw new Error(`No embeddings for model '${currentModel}' in project '${project}'. Run 'npm run embed-backfill' to embed existing memories.`);
+            }
         }
         else {
-            sql = `
-        SELECT m.*, memories_fts.rank
-        FROM memories_fts
-        JOIN memories m ON memories_fts.rowid = m.id
-        WHERE memories_fts MATCH ?
-          AND m.project = ?
-      `;
-            params.push(project);
+            mode = hasEmbeddings() ? "hybrid" : "keyword";
         }
-        if (type) {
-            sql += ` AND m.type = ?`;
-            params.push(type);
+        // ── Keyword half (FTS5) — returns rows in BM25 order ─────────────────────
+        const runKeyword = (cap) => {
+            let sql;
+            const params = [query];
+            if (include_team) {
+                sql = `
+          SELECT m.*, memories_fts.rank
+          FROM memories_fts
+          JOIN memories m ON memories_fts.rowid = m.id
+          WHERE memories_fts MATCH ?
+            AND (m.project = ? OR m.scope = 'team')
+        `;
+                params.push(project);
+            }
+            else {
+                sql = `
+          SELECT m.*, memories_fts.rank
+          FROM memories_fts
+          JOIN memories m ON memories_fts.rowid = m.id
+          WHERE memories_fts MATCH ?
+            AND m.project = ?
+        `;
+                params.push(project);
+            }
+            if (type) {
+                sql += ` AND m.type = ?`;
+                params.push(type);
+            }
+            sql += ` ORDER BY memories_fts.rank LIMIT ?`;
+            params.push(cap);
+            try {
+                return this.db.prepare(sql).all(...params);
+            }
+            catch (err) {
+                // FTS5 raises a parse error for special characters in the user's query.
+                // Treat as "no FTS matches" so the vector half can still produce a result.
+                const msg = err instanceof Error ? err.message : String(err);
+                process.stderr.write(`[recall] FTS query failed for "${query}": ${msg}\n`);
+                return [];
+            }
+        };
+        // ── Vector half — returns rows ordered by cosine desc ────────────────────
+        const runVector = async (cap) => {
+            let queryVec;
+            if (embedding) {
+                queryVec = bytesToFloats(embedding);
+            }
+            else {
+                const [v] = await embedTexts([query]);
+                if (!v)
+                    return [];
+                queryVec = v;
+            }
+            let sql;
+            const params = [];
+            if (include_team) {
+                sql = `SELECT * FROM memories WHERE (project = ? OR scope = 'team') AND embedding_model = ? AND embedding IS NOT NULL`;
+                params.push(project, currentModel);
+            }
+            else {
+                sql = `SELECT * FROM memories WHERE project = ? AND embedding_model = ? AND embedding IS NOT NULL`;
+                params.push(project, currentModel);
+            }
+            if (type) {
+                sql += ` AND type = ?`;
+                params.push(type);
+            }
+            const rows = this.db.prepare(sql).all(...params);
+            const scored = rows.map((r) => {
+                const rowVec = bytesToFloats(r["embedding"]);
+                return { row: r, score: cosine(queryVec, rowVec) };
+            });
+            scored.sort((a, b) => b.score - a.score);
+            return scored.slice(0, cap).map((s) => s.row);
+        };
+        // ── Branch on mode ───────────────────────────────────────────────────────
+        let finalRows;
+        if (mode === "keyword") {
+            finalRows = runKeyword(limit);
         }
-        sql += ` ORDER BY memories_fts.rank LIMIT ?`;
-        params.push(limit);
-        const results = this.db.prepare(sql).all(...params);
-        if (results.length === 0) {
+        else if (mode === "vector") {
+            finalRows = (await runVector(limit)).slice(0, limit);
+        }
+        else {
+            // hybrid: fetch 2× from each side, RRF merge to `limit`.
+            const ftsRows = runKeyword(candidateCap);
+            const vecRows = await runVector(candidateCap);
+            const idOf = (r) => String(r["id"]);
+            const byId = new Map();
+            for (const r of ftsRows)
+                byId.set(idOf(r), r);
+            for (const r of vecRows)
+                if (!byId.has(idOf(r)))
+                    byId.set(idOf(r), r);
+            const mergedIds = rrfMerge(ftsRows.map(idOf), vecRows.map(idOf), limit);
+            finalRows = mergedIds.map((id) => byId.get(id)).filter(Boolean);
+        }
+        if (finalRows.length === 0) {
             return { content: [{ type: "text", text: `No memories found for "${query}" in project "${project}".` }] };
         }
-        const formatted = results.map((m) => {
+        const formatted = finalRows.map((m) => {
             const tagsArr = JSON.parse(m["tags"]);
             return `[${m["type"].toUpperCase()}] ${m["title"]}\n${m["content"]}${tagsArr.length ? `\nTags: ${tagsArr.join(", ")}` : ""}`;
         }).join("\n\n---\n\n");
-        return { content: [{ type: "text", text: `${results.length} result(s) for "${query}":\n\n${formatted}` }] };
+        return { content: [{ type: "text", text: `${finalRows.length} result(s) for "${query}":\n\n${formatted}` }] };
+    }
+    // ── EMBED QUERY ───────────────────────────────────────────────────────────
+    async embedQuery(args) {
+        const [vec] = await embedTexts([args.text]);
+        if (!vec)
+            throw new Error("embedTexts returned empty result");
+        const payload = {
+            embedding: floatsToBytes(vec).toString("base64"),
+            model: getModelId(),
+        };
+        return { content: [{ type: "text", text: JSON.stringify(payload) }] };
     }
     // ── GET CONTEXT ───────────────────────────────────────────────────────────
     async getContext(args) {

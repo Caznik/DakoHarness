@@ -302,7 +302,6 @@ When Claude Code compacts context:
 
 | Item | Description |
 |---|---|
-| Local embedding model for recall | Optional local embedding backend (e.g. Transformers.js, sentence-transformers) for true semantic search beyond agent-side query expansion |
 | RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi |
 | Model routing | Route tasks to different models based on complexity |

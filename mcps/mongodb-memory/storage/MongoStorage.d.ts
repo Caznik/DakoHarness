@@ -10,7 +10,7 @@
  * Index creation moves here from main() in server.ts so that the server
  * entry point no longer needs to know which backend's indexes to create.
  */
-import type { Storage, ToolResult, RememberArgs, RecallArgs, GetContextArgs, PromoteToTeamArgs, ForgetArgs, ListMemoriesArgs, ArchiveWorkitemArgs, StartSessionArgs, LogMessageArgs, GetSessionArgs, ListSessionsArgs } from "./Storage.js";
+import type { Storage, ToolResult, RememberArgs, RecallArgs, EmbedQueryArgs, GetContextArgs, PromoteToTeamArgs, ForgetArgs, ListMemoriesArgs, ArchiveWorkitemArgs, StartSessionArgs, LogMessageArgs, GetSessionArgs, ListSessionsArgs } from "./Storage.js";
 export declare class MongoStorage implements Storage {
     private client;
     private db;
@@ -22,6 +22,7 @@ export declare class MongoStorage implements Storage {
     static create(uri: string, dbName: string): Promise<MongoStorage>;
     remember(args: RememberArgs): Promise<ToolResult>;
     recall(args: RecallArgs): Promise<ToolResult>;
+    embedQuery(args: EmbedQueryArgs): Promise<ToolResult>;
     getContext(args: GetContextArgs): Promise<ToolResult>;
     promoteToTeam(args: PromoteToTeamArgs): Promise<ToolResult>;
     forget(args: ForgetArgs): Promise<ToolResult>;
