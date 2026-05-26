@@ -2,20 +2,20 @@
 wi: WI-memory-quality
 created: 2026-05-22
 updated: 2026-05-22
-status: active
+status: completed
 
 ---
 
 ## Current State
 
-**Current phase:** documentation
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
 
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260522-memory-audit | in-progress | intake, analyze, propose, plan, implement |
+| 20260522-memory-audit | completed | all |
 
 ## Active Blockers
 

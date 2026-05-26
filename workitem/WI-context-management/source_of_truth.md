@@ -2,21 +2,21 @@
 wi: WI-context-management
 created: 2026-05-22
 updated: 2026-05-22
-status: active
+status: completed
 
 
 ---
 
 ## Current State
 
-**Current phase:** documentation
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
 
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260522-compaction-and-pressure | in-progress | intake, analyze, propose, plan, implement |
+| 20260522-compaction-and-pressure | completed | all |
 
 ## Active Blockers
 

@@ -2,20 +2,20 @@
 wi: WI-semantic-recall
 created: 2026-05-25
 updated: 2026-05-25
-status: active
+status: completed
 
 ---
 
 ## Current State
 
-**Current phase:** documentation
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
 
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260525-embedding-search | in-progress | intake, analyze, propose, plan, implementation, review, documentation |
+| 20260525-embedding-search | completed | all |
 
 ## Active Blockers
 

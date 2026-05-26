@@ -2,20 +2,20 @@
 wi: WI-pluggable-memory-backend
 created: 2026-05-25
 updated: 2026-05-25
-status: active
+status: completed
 
 ---
 
 ## Current State
 
-**Current phase:** repo
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
 
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260525-storage-interface | in-progress | intake, analyze, propose, plan, implementation, review, document |
+| 20260525-storage-interface | completed | all |
 
 ## Active Blockers
 

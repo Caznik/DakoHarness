@@ -2,17 +2,17 @@
 wi: WI-dako-setup
 created: 2026-05-22
 updated: 2026-05-22
-status: active
+status: completed
 ---
 
 ## Current State
-**Phase:** repo
+**Phase:** archive
 **Blocked:** no
 
 ## Sub-features
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260522-marketplace-install | in-progress | intake, analyze, propose, plan, implement, review, document |
+| 20260522-marketplace-install | completed | all |
 
 ## Active Blockers
 | # | Description | Status |

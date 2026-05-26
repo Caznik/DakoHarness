@@ -2,20 +2,20 @@
 wi: WI-auto-registry-refresh
 created: 2026-05-25
 updated: 2026-05-25
-status: active
+status: completed
 
 ---
 
 ## Current State
 
-**Current phase:** document
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
 
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260525-session-start-detection | in-progress | intake, analyze, propose, plan, implement, review, document |
+| 20260525-session-start-detection | completed | all |
 
 ## Active Blockers
 

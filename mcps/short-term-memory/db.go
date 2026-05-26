@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -110,6 +111,21 @@ func savePattern(db *sql.DB, p Pattern) (string, error) {
 	return p.ID, nil
 }
 
+// sanitizeFTSQuery replaces FTS5 special characters with spaces so that
+// queries like "context-snapshot" don't get parsed as boolean expressions.
+func sanitizeFTSQuery(q string) string {
+	var b strings.Builder
+	for _, r := range q {
+		switch r {
+		case '-', '"', '*', '^', ':', '(', ')':
+			b.WriteRune(' ')
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
+}
+
 // findPatterns runs an FTS5 query against the patterns for a project.
 func findPatterns(db *sql.DB, project, query string, limit int) ([]Pattern, error) {
 	rows, err := db.Query(`
@@ -120,7 +136,7 @@ func findPatterns(db *sql.DB, project, query string, limit int) ([]Pattern, erro
 		WHERE f.patterns_fts MATCH ? AND p.project = ? AND p.expires_at >= ?
 		ORDER BY rank
 		LIMIT ?`,
-		query, project, time.Now().UTC().Format(time.RFC3339), limit,
+		sanitizeFTSQuery(query), project, time.Now().UTC().Format(time.RFC3339), limit,
 	)
 	if err != nil {
 		return nil, err

@@ -22,17 +22,6 @@
         ]
       }
     ],
-    "PreCompact": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node C:/lab/Proyectos/DakoHarness/mcps/mongodb-memory/logger.mjs PreCompact"
-          }
-        ]
-      }
-    ],
     "SessionStart": []
   }
 }
