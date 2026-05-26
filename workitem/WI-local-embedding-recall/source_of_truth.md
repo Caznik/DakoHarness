@@ -2,20 +2,20 @@
 wi: WI-local-embedding-recall
 created: 2026-05-26
 updated: 2026-05-26
-status: active
+status: completed
 
 ---
 
 ## Current State
 
-**Current phase:** repo
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
 
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260526-embedding-backend | in-progress | intake, analyze, plan, implementation, review, document |
+| 20260526-embedding-backend | completed | all |
 
 ## Active Blockers
 
@@ -41,6 +41,7 @@ status: active
 | 2026-05-26 | Mongo candidate-fetch capped at `max(500, 2×limit)` | Bounded memory for in-app cosine; large collections degrade gracefully |
 | 2026-05-26 | wi-implement dispatch #1 for 20260526-embedding-backend | initial |
 | 2026-05-26 | wi-implement dispatch #2 for 20260526-embedding-backend | post-session-limit-resume (dispatch #1 wrote Architecture Notes then session reset) |
+| 2026-05-26 | Committed as 760ace6 on main, pushed | feat(WI-local-embedding-recall): local embedding model + hybrid recall |
 
 ## Parking / Cancellation
 
