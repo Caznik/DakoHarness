@@ -125,16 +125,13 @@ Per-agent adapter layer for:
 
 | Item | Description |
 |---|---|
-| Sub-agent delegation for implementation | The entire implementation phase currently runs inside the main agent, consuming its context window. Delegate coding tasks to sub-agents via the Agent tool to keep the main context clean and enable parallel work across plan steps. |
-| Context management improvements | Broaden compaction recovery into a proactive strategy: smarter pre-compaction snapshots, context pressure monitoring, and tighter integration between the two-tier memory system and in-session context usage. |
-| Memory quality over time | Memories only accumulate — no signal for stale, contradicted, or duplicated entries. Add a review/consolidation process: deduplicate across sessions, flag memories superseded by newer decisions, and merge contradictions. Matters most after months of active use. |
-| Semantic search for recall | `recall` uses keyword/text search. Embedding-based semantic search would make long-term memory useful for vague or paraphrased queries (e.g. "how should I structure the data layer?" finding "always use the repository pattern"). |
-| RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
-| Multi-agent adapters | Phase 7 — OpenCode, Pi |
-| Context7 / Notion / Jira MCPs | External knowledge source integrations |
-| Model routing | Route tasks to different models based on complexity |
-| Permission harness | Structured permission management layer |
-| MongoDB dashboard | Visual interface for browsing sessions and memories |
+| Local embedding model for recall | `recall` ships agent-side query expansion today (WI-semantic-recall). Adding an optional local embedding backend (e.g. Transformers.js, sentence-transformers) would give true semantic search for vague or paraphrased queries. Forward-compat hooks already reserved in `Storage.ts` and SQLite schema. |
+| RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history. |
+| Multi-agent adapters | Phase 7 — OpenCode, Pi, Codex CLI. |
+| Context7 / Notion / Jira MCPs | External knowledge source integrations. |
+| Model routing | Route tasks to different models based on complexity. |
+| Permission harness | Structured permission management layer. |
+| MongoDB dashboard | Visual interface for browsing sessions and memories. |
 
 ---
 

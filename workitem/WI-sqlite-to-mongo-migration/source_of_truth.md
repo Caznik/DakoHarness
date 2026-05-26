@@ -2,7 +2,7 @@
 wi: WI-sqlite-to-mongo-migration
 created: 2026-05-26
 updated: 2026-05-26
-status: active
+status: completed
 
 
 
@@ -10,14 +10,14 @@ status: active
 
 ## Current State
 
-**Current phase:** repo
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
 
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260526-migrate-command | in-progress | intake, analyze, plan, implementation, review, document |
+| 20260526-migrate-command | completed | all |
 
 ## Active Blockers
 
@@ -39,6 +39,7 @@ status: active
 | 2026-05-26 | Failure ordering: `.env` first then SQLite rename, with revert-`.env` if rename fails | Keeps system from landing in `env=mongodb but SQLite still live` state |
 | 2026-05-26 | Tests via `node --test` (built-in), skip if Mongo unreachable | No new deps; CI without Mongo still passes |
 | 2026-05-26 | wi-implement dispatch #1 for 20260526-migrate-command | initial |
+| 2026-05-26 | Committed as 3f8f585 on main | feat(WI-sqlite-to-mongo-migration): one-shot SQLite→MongoDB migrator |
 
 ## Parking / Cancellation
 
