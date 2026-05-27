@@ -26,8 +26,16 @@ All hooks call `logger.mjs`, which connects directly to MongoDB (no MCP overhead
 | Collection | Contents |
 |---|---|
 | `sessions` | One document per conversation: `session_id`, `project`, `agent`, `cwd`, `started_at` |
-| `messages` | All turns ordered by `seq`, linked to `session_id` by `role` and `content` |
+| `messages` | All turns ordered by `seq`, linked to `session_id` by `role` and `content`. Optional `embedding` + `embedding_model` for semantic recall (see below). |
 | `memories` | Long-term memories + compaction snapshots |
+
+### Message embeddings
+
+`log_message` embeds `role + ": " + content` inline at insert time and writes the Float32 buffer to the row, tagged with the current `DAKO_EMBEDDING_MODEL`. Embedding is **skipped silently** when content is empty, shorter than 20 characters, or `role === "tool"` — the row is still inserted, just without `embedding` / `embedding_model`.
+
+Embed failure never blocks the insert: the row is committed with null embedding fields and a stderr warning is logged. Same failure-graceful contract as `remember`.
+
+Semantic recall over messages is exposed via the `recall_session_messages` MCP tool and the [[Slash Commands#/recall-session]] skill. Default scope is project-wide; pass `session_id` to narrow. To backfill messages that pre-date this feature, run `npm run embed-backfill -- --collection messages` (see [[Memory System#Session message recall (RAG for long sessions)]]).
 
 ---
 

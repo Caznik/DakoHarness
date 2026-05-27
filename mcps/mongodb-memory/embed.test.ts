@@ -25,6 +25,8 @@ import {
   cosine,
   rrfMerge,
   stubEmbed,
+  shouldEmbedMessage,
+  MESSAGE_MIN_LEN,
 } from "./embed.js";
 
 // ── floats ↔ bytes round-trip ────────────────────────────────────────────
@@ -136,4 +138,37 @@ test("rrfMerge both-empty returns empty", () => {
 test("rrfMerge respects limit cap", () => {
   const merged = rrfMerge(["a", "b", "c", "d"], ["e", "f", "g", "h"], 3);
   assert.equal(merged.length, 3);
+});
+
+// ── shouldEmbedMessage skip rules (AC-3) ─────────────────────────────────
+
+test("shouldEmbedMessage rejects empty content", () => {
+  assert.equal(shouldEmbedMessage("user", ""), false);
+  assert.equal(shouldEmbedMessage("user", "   \n  \t  "), false);
+});
+
+test("shouldEmbedMessage rejects content shorter than MESSAGE_MIN_LEN", () => {
+  assert.equal(shouldEmbedMessage("user", "ok"), false);
+  assert.equal(shouldEmbedMessage("user", "a".repeat(MESSAGE_MIN_LEN - 1)), false);
+});
+
+test("shouldEmbedMessage rejects role=tool regardless of length", () => {
+  const long = "a".repeat(MESSAGE_MIN_LEN * 3);
+  assert.equal(shouldEmbedMessage("tool", long), false);
+});
+
+test("shouldEmbedMessage accepts user/assistant messages >= MESSAGE_MIN_LEN", () => {
+  const long = "a".repeat(MESSAGE_MIN_LEN);
+  assert.equal(shouldEmbedMessage("user", long), true);
+  assert.equal(shouldEmbedMessage("assistant", long), true);
+  assert.equal(shouldEmbedMessage("system", long), true);
+});
+
+test("shouldEmbedMessage trims before length check", () => {
+  // 20 chars but with leading/trailing whitespace that brings it to 30 chars raw.
+  const padded = "     " + "a".repeat(MESSAGE_MIN_LEN) + "     ";
+  assert.equal(shouldEmbedMessage("user", padded), true);
+  // Padded short content stays rejected after trim.
+  const shortPadded = "          short          ";
+  assert.equal(shouldEmbedMessage("user", shortPadded), false);
 });

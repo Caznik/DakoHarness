@@ -6,7 +6,7 @@
   "scripts": {
     "migrate": "tsc && node migrate.js",
     "embed-backfill": "tsc && node embed-backfill.js",
-    "test": "tsc && node --test migrate.test.js embed.test.js embed-backfill.test.js recall-hybrid.test.js"
+    "test": "tsc && node --test migrate.test.js embed.test.js embed-backfill.test.js recall-hybrid.test.js recall-session-messages.test.js"
   },
   "keywords": [],
   "author": "",

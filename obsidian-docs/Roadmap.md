@@ -125,7 +125,6 @@ Per-agent adapter layer for:
 
 | Item | Description |
 |---|---|
-| RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history. |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi, Codex CLI. |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations. |
 | Model routing | Route tasks to different models based on complexity. |

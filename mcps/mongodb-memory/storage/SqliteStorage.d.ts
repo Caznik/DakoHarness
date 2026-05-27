@@ -23,6 +23,7 @@
  * existing FTS5 table without requiring the FTS5 table to change.
  */
 import type { Storage, ToolResult, RememberArgs, RecallArgs, EmbedQueryArgs, GetContextArgs, PromoteToTeamArgs, ForgetArgs, ListMemoriesArgs, ArchiveWorkitemArgs, StartSessionArgs, LogMessageArgs, GetSessionArgs, ListSessionsArgs } from "./Storage.js";
+import type { RecallSessionMessagesArgs } from "./Storage.js";
 export declare class SqliteStorage implements Storage {
     private db;
     private constructor();
@@ -40,6 +41,7 @@ export declare class SqliteStorage implements Storage {
     archiveWorkitem(args: ArchiveWorkitemArgs): Promise<ToolResult>;
     startSession(args: StartSessionArgs): Promise<ToolResult>;
     logMessage(args: LogMessageArgs): Promise<ToolResult>;
+    recallSessionMessages(args: RecallSessionMessagesArgs): Promise<ToolResult>;
     getSession(args: GetSessionArgs): Promise<ToolResult>;
     listSessions(args: ListSessionsArgs): Promise<ToolResult>;
     getSystemStatus(): Promise<ToolResult>;

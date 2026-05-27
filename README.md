@@ -249,6 +249,7 @@ Use `/promote-team` to elevate a project memory to team scope when it contains a
 | `/dako:checkpoint` | Save a structured context snapshot to short-term memory for compaction recovery |
 | `/dako:memory-audit` | Audit long-term memories — deduplicate, flag stale (90+ days), resolve contradictions |
 | `/dako:recall <keywords>` | Search long-term memory with query expansion — agent generates paraphrases and merges results across variants |
+| `/dako:recall-session <query>` | Semantically recall past conversation turns from the messages collection (project-wide by default; pass `session=<id>` / `since=<iso>` to narrow) |
 | `/dako:promote [keywords]` | Promote a short-term pattern to permanent long-term memory |
 | `/dako:promote-team [keywords]` | Promote a project memory to team scope (visible across all projects) |
 | `/dako:session-end` | Review patterns from this session, promote durable ones, save in-progress context |
@@ -302,7 +303,6 @@ When Claude Code compacts context:
 
 | Item | Description |
 |---|---|
-| RAG for long sessions | Analyze whether a retrieval-augmented approach improves memory recall in very long sessions where context compaction discards relevant history |
 | Multi-agent adapters | Phase 7 — OpenCode, Pi |
 | Model routing | Route tasks to different models based on complexity |
 | Permission harness | Structured permission management layer |

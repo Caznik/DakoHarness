@@ -67,16 +67,24 @@
  * └──────────────────┴─────────────────────┴──────────────────────────────────────┘
  *
  * Collection: messages
- * ┌──────────────────┬─────────────────────┬──────────────────────────────────────┐
- * │ MongoDB field    │ SQLite column        │ Type translation                     │
- * ├──────────────────┼─────────────────────┼──────────────────────────────────────┤
- * │ _id (ObjectId)   │ id INTEGER PK       │ Auto-rowid                           │
- * │ session_id TEXT  │ session_id TEXT     │ identical                            │
- * │ role TEXT        │ role TEXT           │ identical                            │
- * │ content TEXT     │ content TEXT        │ identical                            │
- * │ seq INTEGER      │ seq INTEGER         │ identical                            │
- * │ timestamp Date   │ timestamp TEXT      │ ISO-8601 string                      │
- * └──────────────────┴─────────────────────┴──────────────────────────────────────┘
+ * ┌──────────────────────┬──────────────────────┬──────────────────────────────────┐
+ * │ MongoDB field        │ SQLite column         │ Type translation                 │
+ * ├──────────────────────┼──────────────────────┼──────────────────────────────────┤
+ * │ _id (ObjectId)       │ id INTEGER PK        │ Auto-rowid                       │
+ * │ session_id TEXT      │ session_id TEXT      │ identical                        │
+ * │ role TEXT            │ role TEXT            │ identical                        │
+ * │ content TEXT         │ content TEXT         │ identical                        │
+ * │ seq INTEGER          │ seq INTEGER          │ identical                        │
+ * │ timestamp Date       │ timestamp TEXT       │ ISO-8601 string                  │
+ * │ embedding Binary(0)  │ embedding BLOB       │ Float32 raw bytes (4 × dim);     │
+ * │                      │                      │ nullable in both                 │
+ * │ embedding_model TEXT │ embedding_model TEXT │ model id that produced vector;   │
+ * │                      │                      │ nullable in both                 │
+ * └──────────────────────┴──────────────────────┴──────────────────────────────────┘
+ *
+ * WI-rag-long-sessions (2026-05-26) added the embedding columns/fields above
+ * so message history is recall-searchable. `messages` has no `project` column;
+ * scoping by project requires joining/looking up via the `sessions` collection.
  */
 export interface RememberArgs {
     project: string;
@@ -156,6 +164,17 @@ export interface ListSessionsArgs {
     agent?: string;
     limit?: number;
 }
+export interface RecallSessionMessagesArgs {
+    project: string;
+    query: string;
+    /** Narrow to one session. Omitted = project-wide across all sessions. */
+    session_id?: string;
+    /** ISO-8601 timestamp; only messages with timestamp >= since are searched. */
+    since?: string;
+    limit?: number;
+    /** Pre-computed query embedding as raw Float32 bytes — server boundary base64-decodes. */
+    embedding?: Buffer;
+}
 /** Shape returned by the MCP SDK's tool response — text content block. */
 export interface ToolResult {
     content: Array<{
@@ -182,6 +201,7 @@ export interface Storage {
     logMessage(args: LogMessageArgs): Promise<ToolResult>;
     getSession(args: GetSessionArgs): Promise<ToolResult>;
     listSessions(args: ListSessionsArgs): Promise<ToolResult>;
+    recallSessionMessages(args: RecallSessionMessagesArgs): Promise<ToolResult>;
     getSystemStatus(): Promise<ToolResult>;
     nextMessageSeq(session_id: string): Promise<number>;
     close(): Promise<void>;

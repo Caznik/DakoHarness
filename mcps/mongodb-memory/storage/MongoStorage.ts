@@ -36,7 +36,9 @@ import {
   bytesToFloats,
   cosine,
   rrfMerge,
+  shouldEmbedMessage,
 } from "../embed.js";
+import type { RecallSessionMessagesArgs } from "./Storage.js";
 
 export class MongoStorage implements Storage {
   private client: MongoClient;
@@ -75,6 +77,10 @@ export class MongoStorage implements Storage {
     // WI-local-embedding-recall: index on embedding_model so the mismatch-skip
     // filter for vector recall is server-side fast even with many memories.
     await db.collection("memories").createIndex({ embedding_model: 1 });
+    // WI-rag-long-sessions: messages also gain an embedding_model index so the
+    // mismatch-skip filter on session-message recall stays fast as message
+    // history grows.
+    await db.collection("messages").createIndex({ embedding_model: 1 });
     await db.collection("workitems").createIndex({ project: 1, wi_path: 1 });
     await db.collection("workitems").createIndex(
       { documentation: "text" },
@@ -344,8 +350,111 @@ export class MongoStorage implements Storage {
     const { session_id, role, content } = args;
     const messages = this.db.collection("messages");
     const seq = await messages.countDocuments({ session_id });
-    await messages.insertOne({ session_id, role, content, seq, timestamp: new Date() });
+    const result = await messages.insertOne({ session_id, role, content, seq, timestamp: new Date() });
+
+    // WI-rag-long-sessions: inline embed (best-effort). Skip-rules avoid
+    // embedding conversational noise; failures never block the insert.
+    if (shouldEmbedMessage(role, content)) {
+      try {
+        const [vec] = await embedTexts([`${role}: ${content}`]);
+        if (vec) {
+          await messages.updateOne(
+            { _id: result.insertedId },
+            { $set: { embedding: new Binary(floatsToBytes(vec), 0), embedding_model: getModelId() } },
+          );
+        }
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`[embed] inline embed failed for message ${seq}: ${reason}\n`);
+      }
+    }
+
     return { content: [{ type: "text", text: `Logged [${role}] seq:${seq}` }] };
+  }
+
+  // ── RECALL SESSION MESSAGES ───────────────────────────────────────────────
+
+  async recallSessionMessages(args: RecallSessionMessagesArgs): Promise<ToolResult> {
+    const { project, query, session_id, since, limit = 10, embedding } = args;
+    const currentModel = getModelId();
+
+    // ── since validation ────────────────────────────────────────────────────
+    let sinceDate: Date | undefined;
+    if (since !== undefined) {
+      const d = new Date(since);
+      if (isNaN(d.getTime())) {
+        throw new Error(`Invalid 'since' value: expected ISO-8601, got '${since}'`);
+      }
+      sinceDate = d;
+    }
+
+    // ── Query embedding ─────────────────────────────────────────────────────
+    let queryVec: Float32Array;
+    if (embedding) {
+      queryVec = bytesToFloats(embedding);
+    } else {
+      const [v] = await embedTexts([query]);
+      if (!v) {
+        return { content: [{ type: "text", text: `No matching messages found in project "${project}".` }] };
+      }
+      queryVec = v;
+    }
+
+    // ── Project scoping ─────────────────────────────────────────────────────
+    // messages have no `project` field — scope by membership via sessions.
+    // If session_id is supplied, verify it belongs to the project; otherwise
+    // collect all session_ids for the project.
+    const sessions = this.db.collection("sessions");
+    let sessionFilter: Record<string, unknown>;
+    if (session_id) {
+      const sess = await sessions.findOne({ session_id, project }, { projection: { session_id: 1 } });
+      if (!sess) {
+        return { content: [{ type: "text", text: `No matching messages found in project "${project}".` }] };
+      }
+      sessionFilter = { session_id };
+    } else {
+      const sessIds = (await sessions.find({ project }, { projection: { session_id: 1 } }).toArray())
+        .map((s) => s["session_id"] as string);
+      if (sessIds.length === 0) {
+        return { content: [{ type: "text", text: `No matching messages found in project "${project}".` }] };
+      }
+      sessionFilter = { session_id: { $in: sessIds } };
+    }
+
+    // ── Build messages filter ───────────────────────────────────────────────
+    const filter: Record<string, unknown> = {
+      ...sessionFilter,
+      embedding_model: currentModel,
+      embedding: { $exists: true, $ne: null },
+    };
+    if (sinceDate) filter["timestamp"] = { $gte: sinceDate };
+
+    const fetchCap = Math.max(500, 2 * limit);
+    const rows = await this.db.collection("messages")
+      .find(filter, { projection: { session_id: 1, role: 1, content: 1, timestamp: 1, embedding: 1 } })
+      .limit(fetchCap)
+      .toArray() as Array<Record<string, unknown>>;
+
+    const scored = rows.map((r) => {
+      const bin = r["embedding"] as Binary | Buffer;
+      const buf = bin instanceof Binary ? Buffer.from(bin.buffer) : (bin as Buffer);
+      return { row: r, score: cosine(queryVec, bytesToFloats(buf)) };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    const top = scored.slice(0, limit).map((s) => s.row);
+
+    if (top.length === 0) {
+      return { content: [{ type: "text", text: `No matching messages found in project "${project}".` }] };
+    }
+
+    const formatted = top.map((m) => {
+      const ts = m["timestamp"] as Date | string;
+      const tsIso = ts instanceof Date ? ts.toISOString() : String(ts);
+      const sid = String(m["session_id"]);
+      return `[${sid.slice(0, 8)}] [${tsIso}] [${m["role"] as string}]: ${m["content"] as string}`;
+    }).join("\n\n");
+
+    return { content: [{ type: "text", text: formatted }] };
   }
 
   // ── GET SESSION ───────────────────────────────────────────────────────────

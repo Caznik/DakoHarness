@@ -89,6 +89,26 @@ The protocol is defined in `CLAUDE.md` under "Memory Query Expansion" — agent-
 
 ---
 
+## /recall-session
+
+**Usage:** `/recall-session <query> [session=<id>] [since=<iso>]`  
+**File:** `.claude/commands/recall-session.md`
+
+Semantically retrieve past conversation turns from the long-term `messages` collection. Useful for compaction recovery beyond the immediate snapshot, or for jogging memory in very long sessions.
+
+**Steps:**
+1. Resolves the project from `DAKO_PROJECT` or cwd basename
+2. Parses optional `session=<id>` / `since=<iso>` from args (default scope: project-wide, all-time)
+3. Calls `embed_query` once on the user's query (one MCP round-trip)
+4. Calls `recall_session_messages` with the embedding and parsed filters
+5. Presents results grouped by session and sorted by similarity; empty result handled gracefully ("no relevant turns found, proceed without prior context")
+
+**Default scope is project-wide** — omitting `session=` searches every session in the project. Vector-only retrieval (no FTS); model-mismatch rows are filtered out automatically.
+
+**When to use:** After compaction when the auto-saved context snapshot isn't enough, when picking up a long-running thread from an earlier session, or when the agent needs to recall a specific exchange semantically rather than by exact keyword.
+
+---
+
 ## /promote
 
 **Usage:** `/promote [keywords]`  

@@ -101,6 +101,44 @@ Each embedding is tagged with the model id that produced it. Rows whose `embeddi
 
 ---
 
+## Session message recall (RAG for long sessions)
+
+The `messages` collection — every user/assistant turn captured by [[Session Logging]] — gets the same vector treatment as `memories`. This lets the agent semantically recall earlier turns from this or any prior session in the project, useful for compaction recovery and very long sessions.
+
+### How it works
+
+`log_message` embeds `role + ": " + content` inline at insert time and writes the resulting Float32 buffer to the row alongside the current `DAKO_EMBEDDING_MODEL`. Skip rules: empty content, content shorter than 20 characters, or `role === "tool"` — the row is still inserted but `embedding` / `embedding_model` are left null. Embed failure falls through cleanly (insert succeeds; stderr warning), same contract as `remember`.
+
+Retrieval is **vector-only** (no FTS half) via the new MCP tool:
+
+```
+recall_session_messages({ project, query, session_id?, since?, limit? })
+```
+
+- Default scope is **project-wide** — omitting `session_id` searches every session in the project. Pass `session_id` to narrow to one conversation.
+- `since` is an optional ISO-8601 cutoff. Unparseable values throw.
+- Model-mismatch rows are filtered out (same contract as memories `recall`).
+- Result format: `[<session_id-short>] [<iso timestamp>] [<role>]: <content>`, similarity-ranked, top `limit` (default 10).
+
+### Backfilling existing messages
+
+The `embed-backfill` script gained a `--collection` flag:
+
+```bash
+cd mcps/mongodb-memory
+npm run embed-backfill -- --collection messages        # backfill messages only
+npm run embed-backfill -- --collection all             # memories then messages
+npm run embed-backfill -- --collection memories        # explicit (default)
+```
+
+`--dry-run` and `--force` work identically across both collections. Default with no flag remains `memories`, so existing invocations behave exactly as before.
+
+### Compaction recovery — beyond the snapshot
+
+[[Slash Commands#/recall-session]] is the agent-facing surface. After compaction the existing context-snapshot path covers the immediate "where was I?" question; `/recall-session <topic>` is the next layer down — pull semantically relevant turns from anywhere in the project's message history when the snapshot isn't enough.
+
+---
+
 ## When to search
 
 | Situation | Tool | Tier |

@@ -26,7 +26,7 @@ import Database from "better-sqlite3";
 import { mkdirSync } from "fs";
 import { dirname } from "path";
 import { randomUUID } from "crypto";
-import { embedTexts, getModelId, floatsToBytes, bytesToFloats, cosine, rrfMerge, } from "../embed.js";
+import { embedTexts, getModelId, floatsToBytes, bytesToFloats, cosine, rrfMerge, shouldEmbedMessage, } from "../embed.js";
 export class SqliteStorage {
     db;
     constructor(db) {
@@ -145,6 +145,12 @@ export class SqliteStorage {
         };
         addColumnIfMissing(`ALTER TABLE memories ADD COLUMN embedding BLOB`);
         addColumnIfMissing(`ALTER TABLE memories ADD COLUMN embedding_model TEXT`);
+        // WI-rag-long-sessions: mirror the embedding columns on `messages` so
+        // session message history is searchable by cosine similarity. Existing
+        // rows naturally show NULL on both columns and are excluded from recall
+        // by the `embedding IS NOT NULL` filter — back-compat preserved.
+        addColumnIfMissing(`ALTER TABLE messages ADD COLUMN embedding BLOB`);
+        addColumnIfMissing(`ALTER TABLE messages ADD COLUMN embedding_model TEXT`);
         return new SqliteStorage(db);
     }
     // ── REMEMBER ──────────────────────────────────────────────────────────────
@@ -419,11 +425,87 @@ export class SqliteStorage {
     async logMessage(args) {
         const { session_id, role, content } = args;
         const seq = this.nextMessageSeqSync(session_id);
-        this.db.prepare(`
+        const info = this.db.prepare(`
       INSERT INTO messages (session_id, role, content, seq, timestamp)
       VALUES (?, ?, ?, ?, ?)
     `).run(session_id, role, content, seq, new Date().toISOString());
+        // WI-rag-long-sessions: inline embed (best-effort). Skip-rules avoid
+        // embedding conversational noise; failures never block the insert.
+        if (shouldEmbedMessage(role, content)) {
+            try {
+                const [vec] = await embedTexts([`${role}: ${content}`]);
+                if (vec) {
+                    this.db.prepare(`UPDATE messages SET embedding = ?, embedding_model = ? WHERE id = ?`)
+                        .run(floatsToBytes(vec), getModelId(), Number(info.lastInsertRowid));
+                }
+            }
+            catch (err) {
+                const reason = err instanceof Error ? err.message : String(err);
+                process.stderr.write(`[embed] inline embed failed for message ${seq}: ${reason}\n`);
+            }
+        }
         return { content: [{ type: "text", text: `Logged [${role}] seq:${seq}` }] };
+    }
+    // ── RECALL SESSION MESSAGES ───────────────────────────────────────────────
+    async recallSessionMessages(args) {
+        const { project, query, session_id, since, limit = 10, embedding } = args;
+        const currentModel = getModelId();
+        // ── since validation ────────────────────────────────────────────────────
+        let sinceIso;
+        if (since !== undefined) {
+            const d = new Date(since);
+            if (isNaN(d.getTime())) {
+                throw new Error(`Invalid 'since' value: expected ISO-8601, got '${since}'`);
+            }
+            sinceIso = d.toISOString();
+        }
+        // ── Query embedding ─────────────────────────────────────────────────────
+        let queryVec;
+        if (embedding) {
+            queryVec = bytesToFloats(embedding);
+        }
+        else {
+            const [v] = await embedTexts([query]);
+            if (!v) {
+                return { content: [{ type: "text", text: `No matching messages found in project "${project}".` }] };
+            }
+            queryVec = v;
+        }
+        // ── Build SQL ───────────────────────────────────────────────────────────
+        // `messages` has no `project` column — JOIN against `sessions` (PK = session_id).
+        let sql = `
+      SELECT m.session_id AS session_id, m.role AS role, m.content AS content,
+             m.timestamp AS timestamp, m.embedding AS embedding
+      FROM messages m
+      JOIN sessions s ON s.session_id = m.session_id
+      WHERE s.project = ?
+        AND m.embedding_model = ?
+        AND m.embedding IS NOT NULL
+    `;
+        const params = [project, currentModel];
+        if (session_id) {
+            sql += ` AND m.session_id = ?`;
+            params.push(session_id);
+        }
+        if (sinceIso) {
+            sql += ` AND m.timestamp >= ?`;
+            params.push(sinceIso);
+        }
+        const fetchCap = Math.max(500, 2 * limit);
+        sql += ` LIMIT ?`;
+        params.push(fetchCap);
+        const rows = this.db.prepare(sql).all(...params);
+        const scored = rows.map((r) => ({
+            row: r,
+            score: cosine(queryVec, bytesToFloats(r.embedding)),
+        }));
+        scored.sort((a, b) => b.score - a.score);
+        const top = scored.slice(0, limit).map((s) => s.row);
+        if (top.length === 0) {
+            return { content: [{ type: "text", text: `No matching messages found in project "${project}".` }] };
+        }
+        const formatted = top.map((m) => `[${m.session_id.slice(0, 8)}] [${m.timestamp}] [${m.role}]: ${m.content}`).join("\n\n");
+        return { content: [{ type: "text", text: formatted }] };
     }
     // ── GET SESSION ───────────────────────────────────────────────────────────
     async getSession(args) {

@@ -127,6 +127,22 @@ Call this at the start of a session to restore project context before working.`,
                 }
             },
             {
+                name: "recall_session_messages",
+                description: "Semantic recall over conversation message history. Vector-only (no keyword/FTS). Returns top-k messages by cosine similarity. Use to retrieve relevant past turns in long sessions or after compaction.",
+                inputSchema: {
+                    type: "object",
+                    properties: {
+                        project: { type: "string" },
+                        query: { type: "string" },
+                        session_id: { type: "string", description: "Optional. If omitted, search project-wide across all sessions." },
+                        since: { type: "string", description: "Optional ISO-8601 timestamp; only messages with timestamp >= since are searched. UTC if no offset." },
+                        limit: { type: "number", default: 10 },
+                        embedding: { type: "string", description: "Base64-encoded Float32 query embedding. If omitted, the server computes it." }
+                    },
+                    required: ["project", "query"]
+                }
+            },
+            {
                 name: "list_sessions",
                 description: "Lists recent sessions for a project, newest first.",
                 inputSchema: {
@@ -226,6 +242,18 @@ Call this at the start of a session to restore project context before working.`,
             return storage.getSession(args);
         if (name === "list_sessions")
             return storage.listSessions(args);
+        if (name === "recall_session_messages") {
+            // Boundary: agent passes embedding as base64; the Storage interface takes Buffer.
+            const a = (args ?? {});
+            const decoded = { ...a };
+            if (typeof a.embedding === "string" && a.embedding.length > 0) {
+                decoded["embedding"] = Buffer.from(a.embedding, "base64");
+            }
+            else {
+                delete decoded["embedding"];
+            }
+            return storage.recallSessionMessages(decoded);
+        }
         if (name === "promote_to_team")
             return storage.promoteToTeam(args);
         if (name === "forget")

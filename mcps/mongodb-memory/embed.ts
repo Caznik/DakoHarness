@@ -36,6 +36,33 @@ export const EMBED_STUB_KEY = "DAKO_EMBED_STUB";
 /** Stub vector dimension (32 floats). Real model dim is whatever the model emits (384 for MiniLM-L6). */
 const STUB_DIM = 32;
 
+/**
+ * Minimum content length (after trim) for a message to be eligible for embedding.
+ * Shorter messages are conversational noise (acks, single words) and embed
+ * poorly — they crowd out signal in recall. See WI-rag-long-sessions Req-3.
+ */
+export const MESSAGE_MIN_LEN = 20;
+
+/**
+ * Skip-rule predicate shared by `logMessage` (inline embed) and
+ * `embed-backfill --collection messages` (batch backfill).
+ *
+ * Returns true when the message is worth embedding:
+ *   - role is not "tool" (tool-call payloads are structured and embed poorly)
+ *   - trimmed content is non-empty
+ *   - trimmed content length >= MESSAGE_MIN_LEN
+ *
+ * Centralizing here keeps insert-time and backfill-time decisions identical —
+ * a row skipped at insert stays skipped at backfill.
+ */
+export function shouldEmbedMessage(role: string, content: string): boolean {
+  if (role === "tool") return false;
+  const trimmed = content.trim();
+  if (trimmed.length === 0) return false;
+  if (trimmed.length < MESSAGE_MIN_LEN) return false;
+  return true;
+}
+
 // ── Public surface ────────────────────────────────────────────────────────
 
 export function getModelId(): string {
