@@ -297,17 +297,20 @@ When Claude Code compacts context:
 | 4 — Skill registry | Done ✅ | Auto-generated index, /registry-refresh (delivered in Phase 2) |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
 | 6 — Marketplace | Under review 🔄 | Submitted to community marketplace — awaiting review |
-| 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi |
+| 7 — Semantic recall | Done ✅ | Local embedding backend, hybrid FTS+vector recall on memories, semantic recall over session messages, SQLite→MongoDB migrator |
+| 8 — Multi-agent | Backlog | Adapters for OpenCode, Pi |
 
 ### Backlog
 
 | Item | Description |
 |---|---|
-| Multi-agent adapters | Phase 7 — OpenCode, Pi |
+| Multi-agent adapters | Phase 8 — OpenCode, Pi |
 | Model routing | Route tasks to different models based on complexity |
 | Permission harness | Structured permission management layer |
 | MongoDB dashboard | Visual interface for browsing sessions and memories |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations |
+| Native vector indexes | Atlas `vectorSearch` and/or `sqlite-vec` to scale beyond in-app cosine |
+| TS housekeeping pass | Clean up pre-existing `tsc` errors in `mcps/mongodb-memory` so `npm test` runs end-to-end |
 
 ---
 

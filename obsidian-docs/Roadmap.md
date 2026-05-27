@@ -15,7 +15,8 @@ created: 2026-05-20
 | 4 — Skill registry | Done ✅ | Delivered early in Phase 2 |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
 | 6 — Marketplace | Under review 🔄 | Submitted to community marketplace — awaiting review |
-| 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi, Codex CLI |
+| 7 — Semantic recall | Done ✅ | Local embedding backend, hybrid (FTS + vector) recall on memories, semantic recall over session messages, SQLite→MongoDB migrator |
+| 8 — Multi-agent | Backlog | Adapters for OpenCode, Pi, Codex CLI |
 
 ---
 
@@ -113,11 +114,42 @@ The `dako` plugin has been submitted to the Claude Code Community Marketplace. O
 
 ---
 
-## Phase 7 — Multi-agent (Backlog)
+## Phase 7 — Semantic recall ✅
+
+Local embeddings, hybrid retrieval on long-term memory, and semantic recall over the captured conversation history.
+
+### Storage backend flexibility
+- Pluggable storage layer (`DAKO_STORAGE_BACKEND=mongodb|sqlite`) — runs without Docker for solo/local use
+- One-shot `npm run migrate` (in `mcps/mongodb-memory`) copies all four collections (`memories`, `workitems`, `sessions`, `messages`) from SQLite → MongoDB with abort-and-rollback semantics, idempotent on dedup, format-preserving `.env` rewrite
+
+### Local embedding backend
+- `@xenova/transformers` ONNX inference; default model `Xenova/all-MiniLM-L6-v2`, 384-dim, ~30MB, English-tuned
+- `DAKO_EMBEDDING_MODEL` env var swaps the model; rows are tagged so mixed-model installs degrade gracefully
+- Float32 raw-byte layout — SQLite `BLOB`, MongoDB `Binary` subtype 0; same shape across both adapters
+- In-app cosine — no native vector index required, keeps the default standalone Docker install zero-setup
+- One-shot `npm run embed-backfill` backfills pre-existing rows; `--dry-run`, `--force`, and per-batch error isolation
+
+### Hybrid recall on memories
+- `recall` accepts `mode: "keyword" | "vector" | "hybrid"`; default auto-detects based on whether any embedded rows exist for the current model
+- **Reciprocal Rank Fusion** (k=60, equal weights, 2× limit candidates) merges FTS and vector halves; single-side fallback if one side is empty
+- New `embed_query` MCP tool so the `/recall` skill preflights the query embedding once and reuses it across keyword-variant calls
+
+### Semantic recall over messages (RAG for long sessions)
+- `messages` collection gains optional `embedding` + `embedding_model` (both adapters)
+- `log_message` inline-embeds `role + ": " + content` at insert time with skip rules (empty / <20 chars / role=tool); failure-graceful contract (insert always succeeds)
+- New `recall_session_messages` MCP tool — vector-only retrieval; default scope **project-wide** (omit `session_id` to search every session); optional ISO-8601 `since` cutoff
+- New `/recall-session <query> [session=<id>] [since=<iso>]` skill — calls `embed_query` once, then `recall_session_messages`; mirrored at all three skill locations
+- `embed-backfill` extended with `--collection memories|messages|all` (default stays `memories` for back-compat)
+- CLAUDE.md compaction-recovery hint points at `/recall-session` as the deeper-history surface beyond the auto-saved snapshot
+
+---
+
+## Phase 8 — Multi-agent (Backlog)
 
 Per-agent adapter layer for:
 - OpenCode
 - Pi
+- Codex CLI
 
 ---
 
@@ -125,11 +157,13 @@ Per-agent adapter layer for:
 
 | Item | Description |
 |---|---|
-| Multi-agent adapters | Phase 7 — OpenCode, Pi, Codex CLI. |
+| Multi-agent adapters | Phase 8 — OpenCode, Pi, Codex CLI. |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations. |
 | Model routing | Route tasks to different models based on complexity. |
 | Permission harness | Structured permission management layer. |
 | MongoDB dashboard | Visual interface for browsing sessions and memories. |
+| Native vector indexes | Atlas `vectorSearch` and/or `sqlite-vec` to scale beyond in-app cosine; byte layout already forward-compatible. |
+| TS housekeeping pass | Fix the pre-existing `tsc` errors in `mcps/mongodb-memory` (missing `@types/better-sqlite3`, missing `@xenova/transformers` types, MCP SDK `setRequestHandler` signature drift) so `npm test` runs cleanly end-to-end. |
 
 ---
 

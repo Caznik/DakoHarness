@@ -2,20 +2,20 @@
 wi: WI-rag-long-sessions
 created: 2026-05-26
 updated: 2026-05-27
-status: active
+status: completed
 
 ---
 
 ## Current State
 
-**Current phase:** repo
+**Current phase:** archive
 **Blocked:** no
 
 ## Sub-features
 
 | Sub-feature | Status | Phases completed |
 |---|---|---|
-| 20260526-message-embeddings | in-progress | intake, analyze, plan, implement, review, document |
+| 20260526-message-embeddings | completed | all |
 
 ## Active Blockers
 
