@@ -1,0 +1,9 @@
+{
+  "name": "dako-opencode-plugins",
+  "private": true,
+  "type": "module",
+  "description": "DakoHarness OpenCode plugins (session logging). No runtime dependencies — uses Node builtins only.",
+  "devDependencies": {
+    "@opencode-ai/plugin": "latest"
+  }
+}

@@ -120,25 +120,34 @@ try {
     await storage.logMessage({ session_id, role: "user", content });
 
   } else if (event === "Stop") {
-    const transcriptPath = payload.transcript_path;
-    let content = "(transcript unavailable)";
+    // OpenCode (and any non-Claude caller) can pass the assistant text directly via
+    // payload.content — there is no JSONL transcript to read. Claude Code passes a
+    // transcript_path instead, which we parse below. Direct content takes precedence.
+    let content;
 
-    if (transcriptPath && existsSync(transcriptPath)) {
-      const lines = readFileSync(transcriptPath, "utf8").trim().split("\n");
-      for (let i = lines.length - 1; i >= 0; i--) {
-        try {
-          const entry = JSON.parse(lines[i]);
-          if (entry.type === "assistant" || entry.role === "assistant") {
-            const msg = entry.message ?? entry;
-            const rawContent = msg.content ?? "";
-            content = typeof rawContent === "string"
-              ? rawContent
-              : Array.isArray(rawContent)
-                ? rawContent.filter(b => b.type === "text").map(b => b.text).join("\n")
-                : JSON.stringify(rawContent);
-            break;
-          }
-        } catch {}
+    if (typeof payload.content === "string" && payload.content.length > 0) {
+      content = payload.content;
+    } else {
+      const transcriptPath = payload.transcript_path;
+      content = "(transcript unavailable)";
+
+      if (transcriptPath && existsSync(transcriptPath)) {
+        const lines = readFileSync(transcriptPath, "utf8").trim().split("\n");
+        for (let i = lines.length - 1; i >= 0; i--) {
+          try {
+            const entry = JSON.parse(lines[i]);
+            if (entry.type === "assistant" || entry.role === "assistant") {
+              const msg = entry.message ?? entry;
+              const rawContent = msg.content ?? "";
+              content = typeof rawContent === "string"
+                ? rawContent
+                : Array.isArray(rawContent)
+                  ? rawContent.filter(b => b.type === "text").map(b => b.text).join("\n")
+                  : JSON.stringify(rawContent);
+              break;
+            }
+          } catch {}
+        }
       }
     }
 

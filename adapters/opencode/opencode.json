@@ -1,0 +1,22 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "dako-long-term-memory": {
+      "type": "local",
+      "command": ["node", "__HARNESS_ROOT__/mcps/mongodb-memory/server.js"],
+      "enabled": true,
+      "environment": {
+        "DAKO_AGENT": "opencode"
+      }
+    },
+    "dako-short-term-memory": {
+      "type": "local",
+      "command": ["__HARNESS_ROOT__/bin/dako-stm.exe"],
+      "enabled": true,
+      "environment": {
+        "DAKO_PROJECT_ROOT": "__PROJECT_ROOT__"
+      }
+    }
+  },
+  "instructions": ["AGENTS.md"]
+}
