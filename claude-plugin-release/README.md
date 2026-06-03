@@ -282,7 +282,7 @@ When Claude Code compacts context:
 | 4 — Skill registry | Done ✅ | Auto-generated index, /registry-refresh (delivered in Phase 2) |
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
 | 6 — Marketplace | Planned | Submit dako plugin to the Claude Code Community Marketplace |
-| 7 — Multi-agent | Backlog | Adapters for OpenCode, Pi |
+| 7 — Multi-agent | In progress 🔄 | OpenCode adapter delivered (`adapters/opencode/`); Pi next |
 
 ### Backlog
 

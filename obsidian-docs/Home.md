@@ -23,7 +23,8 @@ created: 2026-05-20
 | [[Team Memory]] | Cross-project memory sharing |
 | [[Workitem Workflow]] | Structured development workflow with traceability |
 | [[Slash Commands]] | All available slash commands |
-| [[Setup Guide]] | Prerequisites and installation |
+| [[Setup Guide]] | Prerequisites and installation (Claude Code) |
+| [[OpenCode Setup Guide]] | Installation for OpenCode |
 | [[Roadmap]] | Phases, status, and backlog |
 
 ---

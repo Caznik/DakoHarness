@@ -298,13 +298,13 @@ When Claude Code compacts context:
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
 | 6 — Marketplace | Under review 🔄 | Submitted to community marketplace — awaiting review |
 | 7 — Semantic recall | Done ✅ | Local embedding backend, hybrid FTS+vector recall on memories, semantic recall over session messages, SQLite→MongoDB migrator |
-| 8 — Multi-agent | Backlog | Adapters for OpenCode, Pi |
+| 8 — Multi-agent | In progress 🔄 | OpenCode adapter delivered (`adapters/opencode/`); Pi next |
 
 ### Backlog
 
 | Item | Description |
 |---|---|
-| Multi-agent adapters | Phase 8 — OpenCode, Pi |
+| Multi-agent adapters | Phase 8 — OpenCode ✅ delivered; Pi remaining |
 | Model routing | Route tasks to different models based on complexity |
 | Permission harness | Structured permission management layer |
 | MongoDB dashboard | Visual interface for browsing sessions and memories |

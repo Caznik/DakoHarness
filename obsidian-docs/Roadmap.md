@@ -16,7 +16,7 @@ created: 2026-05-20
 | 5 — Installer | Done ✅ | Claude Code plugin ("dako"), cross-platform binaries, setup scripts, --plugin-dir distribution |
 | 6 — Marketplace | Under review 🔄 | Submitted to community marketplace — awaiting review |
 | 7 — Semantic recall | Done ✅ | Local embedding backend, hybrid (FTS + vector) recall on memories, semantic recall over session messages, SQLite→MongoDB migrator |
-| 8 — Multi-agent | Backlog | Adapters for OpenCode, Pi, Codex CLI |
+| 8 — Multi-agent | In progress 🔄 | OpenCode adapter delivered (`adapters/opencode/`); Pi, Codex CLI remaining |
 
 ---
 
@@ -144,10 +144,10 @@ Local embeddings, hybrid retrieval on long-term memory, and semantic recall over
 
 ---
 
-## Phase 8 — Multi-agent (Backlog)
+## Phase 8 — Multi-agent (In progress 🔄)
 
 Per-agent adapter layer for:
-- OpenCode
+- OpenCode ✅ — delivered in `adapters/opencode/` (opencode.json MCP registrations, `dako-logger` plugin for session logging, ported commands/subagent/AGENTS.md, one-stop setup scripts). MCP servers are shared with the Claude Code target.
 - Pi
 - Codex CLI
 
@@ -157,7 +157,7 @@ Per-agent adapter layer for:
 
 | Item | Description |
 |---|---|
-| Multi-agent adapters | Phase 8 — OpenCode, Pi, Codex CLI. |
+| Multi-agent adapters | Phase 8 — OpenCode ✅ delivered; Pi, Codex CLI remaining. |
 | Context7 / Notion / Jira MCPs | External knowledge source integrations. |
 | Model routing | Route tasks to different models based on complexity. |
 | Permission harness | Structured permission management layer. |
