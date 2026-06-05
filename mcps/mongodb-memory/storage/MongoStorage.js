@@ -47,6 +47,9 @@ export class MongoStorage {
         // history grows.
         await db.collection("messages").createIndex({ embedding_model: 1 });
         await db.collection("workitems").createIndex({ project: 1, wi_path: 1 });
+        // WI-workflow-metrics: unique (wi, sub_feature) makes re-harvest upserts
+        // idempotent (one doc per sub-feature). Mirrors the SQLite UNIQUE constraint.
+        await db.collection("workitem_metrics").createIndex({ wi: 1, sub_feature: 1 }, { unique: true });
         await db.collection("workitems").createIndex({ documentation: "text" }, { name: "workitems_text_search" });
         return new MongoStorage(client, db);
     }
@@ -268,6 +271,53 @@ export class MongoStorage {
             archived_at: new Date(),
         });
         return { content: [{ type: "text", text: `Workitem archived: ${wi_path} (project: ${project})` }] };
+    }
+    // ── WORKITEM METRICS ──────────────────────────────────────────────────────
+    async saveWorkitemMetrics(records) {
+        const coll = this.db.collection("workitem_metrics");
+        for (const r of records) {
+            await coll.updateOne({ wi: r.wi, sub_feature: r.sub_feature }, { $set: {
+                    project: r.project,
+                    ac_total: r.ac_total,
+                    ac_satisfied: r.ac_satisfied,
+                    ac_pass_rate: r.ac_pass_rate,
+                    verdict: r.verdict,
+                    qa_iterations: r.qa_iterations,
+                    deviation_count: r.deviation_count,
+                    dispatch_count: r.dispatch_count,
+                    gaps_open: r.gaps_open,
+                    accepted_gaps: r.accepted_gaps,
+                    total_days: r.total_days,
+                    phase_days: r.phase_days,
+                    warnings: r.warnings,
+                    harvested_at: r.harvested_at,
+                } }, { upsert: true });
+        }
+        return { content: [{ type: "text", text: `Upserted ${records.length} workitem metric record(s).` }] };
+    }
+    async getWorkitemMetrics(project) {
+        const docs = await this.db.collection("workitem_metrics")
+            .find({ project })
+            .sort({ wi: 1, sub_feature: 1 })
+            .toArray();
+        return docs.map((d) => ({
+            wi: d["wi"],
+            sub_feature: d["sub_feature"],
+            project: d["project"],
+            ac_total: d["ac_total"],
+            ac_satisfied: d["ac_satisfied"] ?? null,
+            ac_pass_rate: d["ac_pass_rate"] ?? null,
+            verdict: d["verdict"] ?? null,
+            qa_iterations: d["qa_iterations"],
+            deviation_count: d["deviation_count"],
+            dispatch_count: d["dispatch_count"],
+            gaps_open: d["gaps_open"],
+            accepted_gaps: d["accepted_gaps"],
+            total_days: d["total_days"],
+            phase_days: d["phase_days"] ?? {},
+            warnings: d["warnings"] ?? [],
+            harvested_at: d["harvested_at"],
+        }));
     }
     // ── START SESSION ─────────────────────────────────────────────────────────
     async startSession(args) {

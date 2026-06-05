@@ -38,7 +38,7 @@ import {
   rrfMerge,
   shouldEmbedMessage,
 } from "../embed.js";
-import type { RecallSessionMessagesArgs } from "./Storage.js";
+import type { RecallSessionMessagesArgs, WorkitemMetricsRecord } from "./Storage.js";
 
 export class MongoStorage implements Storage {
   private client: MongoClient;
@@ -82,6 +82,9 @@ export class MongoStorage implements Storage {
     // history grows.
     await db.collection("messages").createIndex({ embedding_model: 1 });
     await db.collection("workitems").createIndex({ project: 1, wi_path: 1 });
+    // WI-workflow-metrics: unique (wi, sub_feature) makes re-harvest upserts
+    // idempotent (one doc per sub-feature). Mirrors the SQLite UNIQUE constraint.
+    await db.collection("workitem_metrics").createIndex({ wi: 1, sub_feature: 1 }, { unique: true });
     await db.collection("workitems").createIndex(
       { documentation: "text" },
       { name: "workitems_text_search" }
@@ -333,6 +336,60 @@ export class MongoStorage implements Storage {
       archived_at: new Date(),
     });
     return { content: [{ type: "text", text: `Workitem archived: ${wi_path} (project: ${project})` }] };
+  }
+
+  // ── WORKITEM METRICS ──────────────────────────────────────────────────────
+
+  async saveWorkitemMetrics(records: WorkitemMetricsRecord[]): Promise<ToolResult> {
+    const coll = this.db.collection("workitem_metrics");
+    for (const r of records) {
+      await coll.updateOne(
+        { wi: r.wi, sub_feature: r.sub_feature },
+        { $set: {
+          project: r.project,
+          ac_total: r.ac_total,
+          ac_satisfied: r.ac_satisfied,
+          ac_pass_rate: r.ac_pass_rate,
+          verdict: r.verdict,
+          qa_iterations: r.qa_iterations,
+          deviation_count: r.deviation_count,
+          dispatch_count: r.dispatch_count,
+          gaps_open: r.gaps_open,
+          accepted_gaps: r.accepted_gaps,
+          total_days: r.total_days,
+          phase_days: r.phase_days,
+          warnings: r.warnings,
+          harvested_at: r.harvested_at,
+        } },
+        { upsert: true },
+      );
+    }
+    return { content: [{ type: "text", text: `Upserted ${records.length} workitem metric record(s).` }] };
+  }
+
+  async getWorkitemMetrics(project: string): Promise<WorkitemMetricsRecord[]> {
+    const docs = await this.db.collection("workitem_metrics")
+      .find({ project })
+      .sort({ wi: 1, sub_feature: 1 })
+      .toArray();
+    return docs.map((d) => ({
+      wi: d["wi"] as string,
+      sub_feature: d["sub_feature"] as string,
+      project: d["project"] as string,
+      ac_total: d["ac_total"] as number,
+      ac_satisfied: (d["ac_satisfied"] as number | null) ?? null,
+      ac_pass_rate: (d["ac_pass_rate"] as number | null) ?? null,
+      verdict: (d["verdict"] as string | null) ?? null,
+      qa_iterations: d["qa_iterations"] as number,
+      deviation_count: d["deviation_count"] as number,
+      dispatch_count: d["dispatch_count"] as number,
+      gaps_open: d["gaps_open"] as boolean,
+      accepted_gaps: d["accepted_gaps"] as string,
+      total_days: d["total_days"] as number,
+      phase_days: (d["phase_days"] as Record<string, number>) ?? {},
+      warnings: (d["warnings"] as string[]) ?? [],
+      harvested_at: d["harvested_at"] as string,
+    }));
   }
 
   // ── START SESSION ─────────────────────────────────────────────────────────

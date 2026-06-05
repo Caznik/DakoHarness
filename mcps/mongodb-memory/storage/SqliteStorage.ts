@@ -52,7 +52,7 @@ import {
   rrfMerge,
   shouldEmbedMessage,
 } from "../embed.js";
-import type { RecallSessionMessagesArgs } from "./Storage.js";
+import type { RecallSessionMessagesArgs, WorkitemMetricsRecord } from "./Storage.js";
 
 export class SqliteStorage implements Storage {
   private db: Database.Database;
@@ -162,6 +162,29 @@ export class SqliteStorage implements Storage {
         timestamp   TEXT    NOT NULL   -- ISO-8601
       );
       CREATE INDEX IF NOT EXISTS messages_session_seq ON messages (session_id, seq);
+
+      -- Workitem metrics (WI-workflow-metrics) — one row per (wi, sub_feature),
+      -- upserted idempotently on re-harvest. phase_days / warnings are JSON TEXT
+      -- (same convention as memories.tags).
+      CREATE TABLE IF NOT EXISTS workitem_metrics (
+        wi              TEXT    NOT NULL,
+        sub_feature     TEXT    NOT NULL,
+        project         TEXT    NOT NULL,
+        ac_total        INTEGER NOT NULL DEFAULT 0,
+        ac_satisfied    INTEGER,
+        ac_pass_rate    REAL,
+        verdict         TEXT,
+        qa_iterations   INTEGER NOT NULL DEFAULT 0,
+        deviation_count INTEGER NOT NULL DEFAULT 0,
+        dispatch_count  INTEGER NOT NULL DEFAULT 0,
+        gaps_open       INTEGER NOT NULL DEFAULT 0,   -- 0/1
+        accepted_gaps   TEXT    NOT NULL DEFAULT '',
+        total_days      INTEGER NOT NULL DEFAULT 0,
+        phase_days      TEXT    NOT NULL DEFAULT '{}', -- JSON object
+        warnings        TEXT    NOT NULL DEFAULT '[]', -- JSON array
+        harvested_at    TEXT    NOT NULL,              -- ISO-8601
+        UNIQUE(wi, sub_feature)
+      );
     `);
 
     // WI-local-embedding-recall: idempotent ALTER TABLE to add vector columns.
@@ -452,6 +475,66 @@ export class SqliteStorage implements Storage {
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(wi_path, project, username ?? null, git_commit ?? null, documentation, new Date().toISOString());
     return { content: [{ type: "text", text: `Workitem archived: ${wi_path} (project: ${project})` }] };
+  }
+
+  // ── WORKITEM METRICS ──────────────────────────────────────────────────────
+
+  async saveWorkitemMetrics(records: WorkitemMetricsRecord[]): Promise<ToolResult> {
+    const stmt = this.db.prepare(`
+      INSERT INTO workitem_metrics
+        (wi, sub_feature, project, ac_total, ac_satisfied, ac_pass_rate, verdict,
+         qa_iterations, deviation_count, dispatch_count, gaps_open, accepted_gaps,
+         total_days, phase_days, warnings, harvested_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(wi, sub_feature) DO UPDATE SET
+        project = excluded.project,
+        ac_total = excluded.ac_total,
+        ac_satisfied = excluded.ac_satisfied,
+        ac_pass_rate = excluded.ac_pass_rate,
+        verdict = excluded.verdict,
+        qa_iterations = excluded.qa_iterations,
+        deviation_count = excluded.deviation_count,
+        dispatch_count = excluded.dispatch_count,
+        gaps_open = excluded.gaps_open,
+        accepted_gaps = excluded.accepted_gaps,
+        total_days = excluded.total_days,
+        phase_days = excluded.phase_days,
+        warnings = excluded.warnings,
+        harvested_at = excluded.harvested_at
+    `);
+    const tx = this.db.transaction((rows: WorkitemMetricsRecord[]) => {
+      for (const r of rows) {
+        stmt.run(
+          r.wi, r.sub_feature, r.project, r.ac_total, r.ac_satisfied, r.ac_pass_rate, r.verdict,
+          r.qa_iterations, r.deviation_count, r.dispatch_count, r.gaps_open ? 1 : 0, r.accepted_gaps,
+          r.total_days, JSON.stringify(r.phase_days), JSON.stringify(r.warnings), r.harvested_at,
+        );
+      }
+    });
+    tx(records);
+    return { content: [{ type: "text", text: `Upserted ${records.length} workitem metric record(s).` }] };
+  }
+
+  async getWorkitemMetrics(project: string): Promise<WorkitemMetricsRecord[]> {
+    const rows = this.db.prepare(`SELECT * FROM workitem_metrics WHERE project = ? ORDER BY wi ASC, sub_feature ASC`).all(project) as Array<Record<string, unknown>>;
+    return rows.map((r) => ({
+      wi: r["wi"] as string,
+      sub_feature: r["sub_feature"] as string,
+      project: r["project"] as string,
+      ac_total: r["ac_total"] as number,
+      ac_satisfied: (r["ac_satisfied"] as number | null),
+      ac_pass_rate: (r["ac_pass_rate"] as number | null),
+      verdict: (r["verdict"] as string | null),
+      qa_iterations: r["qa_iterations"] as number,
+      deviation_count: r["deviation_count"] as number,
+      dispatch_count: r["dispatch_count"] as number,
+      gaps_open: (r["gaps_open"] as number) === 1,
+      accepted_gaps: r["accepted_gaps"] as string,
+      total_days: r["total_days"] as number,
+      phase_days: JSON.parse(r["phase_days"] as string) as Record<string, number>,
+      warnings: JSON.parse(r["warnings"] as string) as string[],
+      harvested_at: r["harvested_at"] as string,
+    }));
   }
 
   // ── START SESSION ─────────────────────────────────────────────────────────

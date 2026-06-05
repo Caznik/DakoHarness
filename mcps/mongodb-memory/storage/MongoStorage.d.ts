@@ -11,7 +11,7 @@
  * entry point no longer needs to know which backend's indexes to create.
  */
 import type { Storage, ToolResult, RememberArgs, RecallArgs, EmbedQueryArgs, GetContextArgs, PromoteToTeamArgs, ForgetArgs, ListMemoriesArgs, ArchiveWorkitemArgs, StartSessionArgs, LogMessageArgs, GetSessionArgs, ListSessionsArgs } from "./Storage.js";
-import type { RecallSessionMessagesArgs } from "./Storage.js";
+import type { RecallSessionMessagesArgs, WorkitemMetricsRecord } from "./Storage.js";
 export declare class MongoStorage implements Storage {
     private client;
     private db;
@@ -29,6 +29,8 @@ export declare class MongoStorage implements Storage {
     forget(args: ForgetArgs): Promise<ToolResult>;
     listMemories(args: ListMemoriesArgs): Promise<ToolResult>;
     archiveWorkitem(args: ArchiveWorkitemArgs): Promise<ToolResult>;
+    saveWorkitemMetrics(records: WorkitemMetricsRecord[]): Promise<ToolResult>;
+    getWorkitemMetrics(project: string): Promise<WorkitemMetricsRecord[]>;
     startSession(args: StartSessionArgs): Promise<ToolResult>;
     logMessage(args: LogMessageArgs): Promise<ToolResult>;
     recallSessionMessages(args: RecallSessionMessagesArgs): Promise<ToolResult>;

@@ -5,6 +5,28 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import * as dotenv from "dotenv";
 import { getStorage } from "./storage/factory.js";
+import { harvestTree, computeRollup } from "./metrics.js";
+import type { Storage, ToolResult } from "./storage/Storage.js";
+
+/**
+ * Handler for the `harvest_workitem_metrics` tool, exported so tests can drive
+ * the harvest → rollup → optional-persist flow without a live MCP transport.
+ * `write` defaults to false → zero writes (AC-9). Always returns the per-record
+ * array + rollup as a JSON text block.
+ */
+export async function handleHarvestWorkitemMetrics(
+  storage: Storage,
+  args: { project: string; workitem_root: string; write?: boolean },
+): Promise<ToolResult> {
+  const { project, workitem_root, write = false } = args;
+  const { records, warnings } = harvestTree(workitem_root, project);
+  const rollup = computeRollup(records);
+  if (write) {
+    await storage.saveWorkitemMetrics(records);
+  }
+  const payload = { records, rollup, warnings, persisted: write };
+  return { content: [{ type: "text", text: JSON.stringify(payload, null, 2) }] };
+}
 
 dotenv.config({ path: join(dirname(fileURLToPath(import.meta.url)), ".env") });
 
@@ -217,6 +239,19 @@ Call this at the start of a session to restore project context before working.`,
           },
           required: ["wi_path", "project", "documentation"]
         }
+      },
+      {
+        name: "harvest_workitem_metrics",
+        description: "Retroactively harvest workflow metrics (AC pass rate, QA iterations, replans/deviations, gaps, calendar-day phase spans) from the workitem/ artifact tree. Returns per-sub-feature records + a project rollup. Read-only by default; pass write:true to persist to the workitem_metrics store. Call from /wi-metrics.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            project:       { type: "string", description: "Project name (stamped on every record)" },
+            workitem_root: { type: "string", description: "Absolute path to the repo's workitem/ directory" },
+            write:         { type: "boolean", description: "Persist harvested records to the workitem_metrics store (default false — read-only)", default: false }
+          },
+          required: ["project", "workitem_root"]
+        }
       }
     ]
   }));
@@ -258,6 +293,7 @@ Call this at the start of a session to restore project context before working.`,
     if (name === "forget")          return storage.forget(args as any);
     if (name === "list_memories")   return storage.listMemories(args as any);
     if (name === "archive_workitem") return storage.archiveWorkitem(args as any);
+    if (name === "harvest_workitem_metrics") return handleHarvestWorkitemMetrics(storage, args as any);
 
     throw new Error(`Unknown tool: ${name}`);
   });
@@ -266,7 +302,12 @@ Call this at the start of a session to restore project context before working.`,
   await server.connect(transport);
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : String(err));
-  process.exit(1);
-});
+// Only boot the stdio MCP server when run directly (e.g. `node server.js`).
+// Guarding this lets tests import handleHarvestWorkitemMetrics without starting
+// the transport, which would keep the event loop alive and hang `node --test`.
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((err) => {
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
+  });
+}

@@ -182,8 +182,14 @@ Completed workitems are stored in MongoDB `workitems` collection:
 | `/wi-repo <wi-path>` | Repo actions only |
 | `/wi-archive <wi-path>` | Archive to MongoDB |
 
+### Reporting
+
+| Command | Description |
+|---|---|
+| `/wi-metrics [<WI>] [--save]` | Harvest workflow telemetry from artifact files (AC pass rate, QA iterations, replans, gaps, calendar-day phase spans) and render a per-WI table + project rollup. Read-only unless `--save` persists to the `workitem_metrics` store. Scopes to one `<WI>` when given. |
+
 > [!NOTE]
-> Unified commands auto-detect the active workitem. Individual commands require the user to specify the workitem path.
+> Unified commands auto-detect the active workitem. Individual commands require the user to specify the workitem path. `/wi-metrics` reads the artifacts only — it never modifies workitem state.
 
 ---
 

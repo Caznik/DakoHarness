@@ -85,6 +85,29 @@
  * WI-rag-long-sessions (2026-05-26) added the embedding columns/fields above
  * so message history is recall-searchable. `messages` has no `project` column;
  * scoping by project requires joining/looking up via the `sessions` collection.
+ *
+ * Collection: workitem_metrics  (WI-workflow-metrics 2026-06-05)
+ * ┌──────────────────────┬──────────────────────┬──────────────────────────────────┐
+ * │ MongoDB field        │ SQLite column         │ Type translation                 │
+ * ├──────────────────────┼──────────────────────┼──────────────────────────────────┤
+ * │ wi TEXT              │ wi TEXT              │ identical (part of unique key)   │
+ * │ sub_feature TEXT     │ sub_feature TEXT     │ identical (part of unique key)   │
+ * │ project TEXT         │ project TEXT         │ identical                        │
+ * │ ac_total INT         │ ac_total INTEGER     │ identical                        │
+ * │ ac_satisfied INT|nul │ ac_satisfied INTEGER │ nullable in both                 │
+ * │ ac_pass_rate Num|nul │ ac_pass_rate REAL    │ nullable in both                 │
+ * │ verdict TEXT|null    │ verdict TEXT         │ nullable in both                 │
+ * │ qa_iterations INT    │ qa_iterations INTEGER│ identical                        │
+ * │ deviation_count INT  │ deviation_count INT  │ identical                        │
+ * │ dispatch_count INT   │ dispatch_count INT   │ identical                        │
+ * │ gaps_open Bool       │ gaps_open INTEGER    │ 0/1 in SQLite                    │
+ * │ accepted_gaps TEXT   │ accepted_gaps TEXT   │ identical                        │
+ * │ total_days INT       │ total_days INTEGER   │ identical                        │
+ * │ phase_days object    │ phase_days TEXT      │ native object / JSON string      │
+ * │ warnings string[]    │ warnings TEXT        │ native array / JSON string       │
+ * │ harvested_at TEXT    │ harvested_at TEXT    │ ISO-8601 string                  │
+ * └──────────────────────┴──────────────────────┴──────────────────────────────────┘
+ * Upsert key = (wi, sub_feature). Unique in both adapters → idempotent re-harvest.
  */
 export {};
 //# sourceMappingURL=Storage.js.map

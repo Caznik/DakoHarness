@@ -17,6 +17,7 @@ created: 2026-05-20
 | 6 — Marketplace | Under review 🔄 | Submitted to community marketplace — awaiting review |
 | 7 — Semantic recall | Done ✅ | Local embedding backend, hybrid (FTS + vector) recall on memories, semantic recall over session messages, SQLite→MongoDB migrator |
 | 8 — Multi-agent | In progress 🔄 | OpenCode adapter delivered (`adapters/opencode/`); Pi, Codex CLI remaining |
+| 9 — Workflow metrics | Done ✅ | Retroactive harvest of workitem artifacts → telemetry (AC pass rate, QA iterations, replans, gaps, calendar-day phase spans); `harvest_workitem_metrics` MCP tool + `/wi-metrics` report; persisted to `workitem_metrics` in both storage backends |
 
 ---
 
@@ -150,6 +151,29 @@ Per-agent adapter layer for:
 - OpenCode ✅ — delivered in `adapters/opencode/` (opencode.json MCP registrations, `dako-logger` plugin for session logging, ported commands/subagent/AGENTS.md, one-stop setup scripts). MCP servers are shared with the Claude Code target.
 - Pi
 - Codex CLI
+
+---
+
+## Phase 9 — Workflow metrics ✅
+
+Telemetry over the workitem workflow itself, harvested retroactively from the artifact files every phase already writes — no instrumentation of the wi-* commands, so it works over all existing workitems immediately.
+
+### Metrics computed (per sub-feature + project rollup)
+- **AC pass rate** — satisfied/total from each `review.md` `## AC Verification` table, plus the `verdict`
+- **QA-loop iterations** — `## QA Log` row count from `implementation.md`
+- **Replans** — `## Plan Deviations` rows + distinct `dispatch #N` markers in `source_of_truth.md`
+- **Gaps** — open/clean + accepted-gaps text from `review.md`
+- **Calendar-day phase spans** — whole-day deltas between phase artifact `date:` frontmatter (day granularity; intra-day timestamps are out of scope — see Backlog)
+- **Project rollup** — averages that exclude records missing a metric (not counted as 0), total replans, gaps, and `wi_count_by_status`
+
+### Surfaces
+- `harvest_workitem_metrics` MCP tool (`{ project, workitem_root, write? }`) — walks the tree, returns `{ records, rollup, warnings, persisted }`; `write:false` is read-only, `write:true` upserts
+- `/wi-metrics [<WI>] [--save]` skill (mirrored to all 4 command locations) — renders a per-WI table + rollup
+- New `workitem_metrics` store keyed by `(wi, sub_feature)`, idempotent upsert, in **both** MongoDB and SQLite adapters (separate from `workitems` so in-flight WIs get metrics too)
+
+### Notes
+- Markdown table parsing is code-span-aware: pipes inside `` `code` `` spans and `\|` escapes are not column delimiters (real AC rows like `` `--collection memories|messages|all` `` would otherwise shift the Satisfied column).
+- The MCP now reads project files for the first time; the skill supplies the absolute `workitem_root`, mirroring how `archive_workitem` takes caller-supplied paths.
 
 ---
 
