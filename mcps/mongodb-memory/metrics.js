@@ -194,15 +194,22 @@ export function parseReplans(implMd, sotMd) {
 /**
  * Gaps from review.md. gaps_open = false iff `## Gaps` body trimmed is empty
  * or starts with "none" (case-insensitive). accepted_gaps = text after
- * "Accepted gaps:" (anywhere in the doc); a literal "none" → "".
+ * "Accepted gaps:" within the `## Verdict` section only; markdown bold markers
+ * are stripped and a literal "none" → "".
  */
 export function parseGaps(reviewMd) {
     const gapsBody = sectionText(reviewMd, /Gaps/).trim();
     const gaps_open = !(gapsBody.length === 0 || /^none\b/i.test(gapsBody));
+    // "Accepted gaps:" is only meaningful inside the `## Verdict` section.
+    // Scanning the whole doc previously produced false positives — the phrase
+    // also appears in AC-evidence cells (e.g. a review describing this very
+    // parser). Anchor to the Verdict section, capture only the rest of that line,
+    // and strip surrounding markdown bold (`**Accepted gaps:** none`).
     let accepted_gaps = "";
-    const m = /Accepted gaps:\s*(.*)/i.exec(reviewMd);
+    const verdictBody = sectionText(reviewMd, /Verdict/);
+    const m = /Accepted gaps:\s*\**\s*([^\n]*)/i.exec(verdictBody);
     if (m) {
-        const val = m[1].trim();
+        const val = m[1].replace(/\*+/g, "").trim();
         accepted_gaps = /^none$/i.test(val) ? "" : val;
     }
     return { gaps_open, accepted_gaps };

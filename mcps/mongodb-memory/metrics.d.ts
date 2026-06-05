@@ -97,7 +97,8 @@ export declare function parseReplans(implMd: string, sotMd: string): {
 /**
  * Gaps from review.md. gaps_open = false iff `## Gaps` body trimmed is empty
  * or starts with "none" (case-insensitive). accepted_gaps = text after
- * "Accepted gaps:" (anywhere in the doc); a literal "none" → "".
+ * "Accepted gaps:" within the `## Verdict` section only; markdown bold markers
+ * are stripped and a literal "none" → "".
  */
 export declare function parseGaps(reviewMd: string): {
     gaps_open: boolean;

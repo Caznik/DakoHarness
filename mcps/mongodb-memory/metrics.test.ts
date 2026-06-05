@@ -192,6 +192,34 @@ test("parseGaps non-empty → gaps_open true + accepted text (AC-5)", () => {
   assert.equal(m.accepted_gaps, "AC-7 deferred to follow-up");
 });
 
+test("parseGaps strips markdown bold from Accepted gaps (AC-5)", () => {
+  const md = `## Gaps\nNone.\n\n## Verdict\n**Result:** pass\n**Accepted gaps:** none`;
+  const m = parseGaps(md);
+  assert.equal(m.accepted_gaps, "", "**...** none → empty, no leading ** noise");
+
+  const md2 = `## Gaps\nAC-3 open.\n\n## Verdict\n**Accepted gaps:** AC-3 deferred to follow-up`;
+  assert.equal(parseGaps(md2).accepted_gaps, "AC-3 deferred to follow-up");
+});
+
+test("parseGaps ignores 'Accepted gaps:' outside the Verdict section (AC-5)", () => {
+  // The phrase appears in an AC-evidence cell; the real value lives in Verdict.
+  const md = [
+    "## AC Verification",
+    "| AC | Satisfied | Notes |",
+    "|---|---|---|",
+    "| AC-5 | yes | parses `Accepted gaps:` with literal none→\"\" |",
+    "",
+    "## Gaps",
+    "None.",
+    "",
+    "## Verdict",
+    "**Accepted gaps:** none",
+  ].join("\n");
+  const m = parseGaps(md);
+  assert.equal(m.gaps_open, false);
+  assert.equal(m.accepted_gaps, "", "must read the Verdict line, not the evidence cell");
+});
+
 // ── parsePhaseDays (AC-6) ──────────────────────────────────────────────────
 
 test("parsePhaseDays whole-day deltas from previous present phase (AC-6)", () => {
