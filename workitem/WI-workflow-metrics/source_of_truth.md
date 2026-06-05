@@ -2,7 +2,7 @@
 wi: WI-workflow-metrics
 created: 2026-06-05
 updated: 2026-06-05
-status: active
+status: completed
 ---
 
 # WI-workflow-metrics
@@ -13,14 +13,14 @@ Workflow telemetry layer — harvest per-phase workitem artifacts into metrics (
 
 | Field | Value |
 |---|---|
-| Phase | documentation |
+| Phase | archive |
 | Blocked | no |
 
 ## Sub-features
 
 | Sub-feature | State |
 |---|---|
-| 20260605-artifact-telemetry | in-progress (intake, analyze, plan, implementation, review, documentation) |
+| 20260605-artifact-telemetry | completed (all phases) |
 
 ## Active Blockers
 
@@ -42,6 +42,8 @@ _None._
 | 2026-06-05 | Implementation completed inline (sub-agent dispatch declined by user) — all 12 ACs COVERED, 73/73 tests pass | User rejected the wi-implementer sub-agent and said "keep going"; finished in main context. Two in-flight fixes: ESM main-guard in server.ts (test-import hang) and code-span-aware `tableCells` (real-tree smoke caught a 13/14 AC miscount on pipes inside code spans). |
 | 2026-06-05 | Review verdict: pass, no gaps — confirmed under autonomous grant | All 12 ACs independently verified (SQLite re-run, Mongo branch read-verified as it was unreachable); both deviations acceptable. Scope notes recorded: Mongo not executed this session; pre-existing tsc baseline unchanged. |
 | 2026-06-05 | Documentation: updated Roadmap (new Phase 9) + Workitem Workflow command ref; wrote documentation.md | Roadmap is the capability tracker that prompted this WI; Workitem Workflow doc is the canonical command reference. Confirmed under autonomous grant. |
+| 2026-06-05 | Repo: committed 44 files as 91e33e0 on branch feat/WI-workflow-metrics | User explicitly approved the suggested commit message; branched off main first per the no-commit-on-main rule. Commit scoped to WI files + recompiled artifacts; unrelated pre-existing working-tree changes left untouched. |
+| 2026-06-05 | Pushed branch to origin; archived to MongoDB workitems collection — WI completed | User approved push + archive. Pushed feat/WI-workflow-metrics (PR link issued). Archive done via the storage layer's archiveWorkitem directly (MCP server was down but MongoDB reachable; identical code path), tagged with commit 91e33e0; verified present in workitems collection. |
 
 ## Parking
 
