@@ -146,6 +146,8 @@ Intake → Analyze → Propose* → Plan → Implement → Review → Document �
 ```
 *Propose is conditional — triggered only when multiple viable implementation directions exist.
 
+**Phase chaining on OpenCode.** OpenCode has no agent-invokable slash-command tool — you cannot expand `/wi-<phase>` yourself the way Claude Code can. When a command says "chain into `/wi-<phase>`" (e.g. `/wi-next` advancing `review → document`), you must **read that phase's command file `.opencode/commands/wi-<phase>.md` and execute its steps in the same turn**. Never just advance the `Current phase` pointer in `source_of_truth.md` and stop — and never improvise a phase from memory. That omission is what silently drops the Document / Repo / Archive phases.
+
 ### Gate rules
 
 - **Human approval required**: Intake, Analyze (AC sign-off), Propose (approach selection), Plan, Review, Document, Repo

@@ -79,7 +79,7 @@ verdict: pass | fail | accepted-with-gaps
 ### 7. Present to user
 - Show full analysis: AC table, plan coverage, deviations, gaps
 - For each gap: "Accept this gap or send back to implementation?"
-  - If send back: set `implementation.md` status → `in-progress`, update `source_of_truth.md`, chain into `/wi-implement`
+  - If send back: set `implementation.md` status → `in-progress`, update `source_of_truth.md`, then read `.opencode/commands/wi-implement.md` and execute it (OpenCode cannot invoke `/wi-implement` as a slash command)
   - If accept: record in Accepted gaps
 
 ### 8. Determine verdict

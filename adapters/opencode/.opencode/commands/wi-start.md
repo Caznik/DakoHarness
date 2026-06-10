@@ -11,7 +11,7 @@ When a user asks for something that may qualify as a development task. Primary e
 ### 0. Check for active workitems
 - Search `workitem/` recursively for `source_of_truth.md` files with `status: active`
 - If found: warn — "Workitem **WI-X** is already active (phase: Y). Continue it with `/wi-next`, or start a new one?"
-- If user says continue: invoke `/wi-next` instead
+- If user says continue: read `.opencode/commands/wi-next.md` and execute it instead
 - If user says start new: proceed
 
 ### 1. Get the request
@@ -49,8 +49,10 @@ Create the workitem folder structure:
 - Empty Cancellation section
 
 ### 5. Route
-- **Full workflow** → chain into `/wi-analyze`
-- **Partial workflow** → chain into the requested phase command
+> **OpenCode chaining:** the agent cannot invoke `/wi-<phase>` as a slash command. To "chain into" a phase, read that phase's command file `.opencode/commands/wi-<phase>.md` and execute its steps in this same turn.
+
+- **Full workflow** → read `.opencode/commands/wi-analyze.md` and execute it
+- **Partial workflow** → read the requested phase's `.opencode/commands/wi-<phase>.md` and execute it
 - **Free flow** → inform user no workitem was created, proceed freely
 
 ### 6. On rejection

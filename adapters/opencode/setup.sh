@@ -243,6 +243,10 @@ Start every session blank. Do **not** preload memory. Wait for the user'\''s fir
 **Long-term** (`remember`): architectural decision, permanent convention, systemic bug lesson, important project fact.
 
 Session transcripts are captured automatically by the dako-logger plugin — you do not need to log messages manually.
+
+### Workitem phase chaining
+
+OpenCode cannot invoke `/wi-<phase>` as a slash command on your behalf. When a workitem command says "chain into `/wi-<phase>`" (e.g. `/wi-next` advancing review → document), read that phase'"'"'s command file `.opencode/commands/wi-<phase>.md` and execute its steps in the same turn. Never just advance the phase pointer and stop — that silently drops Document / Repo / Archive.
 '
 if [ -f "$AGENTS_MD" ]; then
   if grep -q "DakoHarness — Memory Protocol" "$AGENTS_MD"; then
